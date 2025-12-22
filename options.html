@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Send to Odoo – Settings</title>
+</head>
+<body>
+  <h2>Odoo Connection</h2>
+
+  <form id="settings">
+    <label>
+      Odoo URL:<br>
+      <input id="url" type="text" placeholder="https://my.odoo.com">
+    </label><br><br>
+
+    <label>
+      API Key:<br>
+      <input id="apikey" type="password">
+    </label><br><br>
+
+    <label>
+      Database (optional):<br>
+      <input id="db" type="text">
+    </label><br><br>
+
+    <button id="test" type="button">Test connection</button>
+    <button id="save" type="submit" disabled>Save</button>
+  </form>
+
+  <p id="status"></p>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

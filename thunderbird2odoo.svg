@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 48 48"
+   fill="none"
+   stroke="#875A7B"
+   stroke-width="2.5"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   version="1.1"
+   id="svg20"
+   sodipodi:docname="thunderbird-odoo2.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs24" />
+  <sodipodi:namedview
+     id="namedview22"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="7.03"
+     inkscape:cx="37.837838"
+     inkscape:cy="7.6813656"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <!-- Envelope -->
+  <rect
+     x="6"
+     y="24"
+     width="36"
+     height="20"
+     rx="3"
+     id="rect2" />
+  <path
+     d="m 6,26 18,12 18,-12"
+     id="path4" />
+  <!-- Upload arrow -->
+  <path
+     d="M 24,12 V 24"
+     id="path6"
+     style="stroke-width:2" />
+  <path
+     d="m 20,16 4,-4 4,4"
+     id="path8" />
+  <!-- Odoo logo -->
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="odoo"
+     transform="matrix(0.06210476,0,0,0.06210476,25.60689,-5.2278548)">
+    <path
+       d="m 117.24948,252.21088 a 45.84528,45.845279 0 1 1 45.84528,-45.84529 45.84528,45.845279 0 0 1 -45.84528,45.84529 z m 0,-18.9494 a 26.895898,26.895898 0 1 0 -26.895899,-26.89589 26.895898,26.895898 0 0 0 26.895899,26.89589 z m -95.969455,18.9494 a 45.84528,45.845279 0 1 1 45.845282,-45.84529 45.84528,45.845279 0 0 1 -45.845282,45.84529 z m 0,-18.9494 A 26.895898,26.895898 0 1 0 -5.6158725,206.36559 26.895898,26.895898 0 0 0 21.280025,233.26148 Z m -50.124177,-27.50716 c 0,25.61223 -20.53868,46.45656 -45.84528,46.45656 -25.30659,0 -45.845278,-20.7832 -45.845278,-46.39543 0,-25.61224 18.64375,-45.29514 45.845278,-45.29514 10.02484,0 19.31615,2.13944 26.8959,7.70201 v -26.59026 c 0,-5.07355 4.46228,-9.23019 9.47469,-9.23019 5.01242,0 9.47469,4.15664 9.47469,9.23019 z m -45.84528,27.50716 a 26.895898,26.895898 0 1 0 -26.895888,-26.89589 26.895898,26.895898 0 0 0 26.895888,26.89589 z"
+       style="opacity:1;fill:#8f8f8f;stroke-width:1.52818"
+       id="path172" />
+    <path
+       d="m -170.65888,252.21088 a 45.84528,45.845279 0 1 1 45.84528,-45.84529 45.84528,45.845279 0 0 1 -45.84528,45.84529 z m 0,-18.9494 a 26.895898,26.895898 0 1 0 -26.8959,-26.89589 26.895898,26.895898 0 0 0 26.8959,26.89589 z"
+       style="opacity:1;fill:#714b67;stroke-width:1.52818"
+       id="path174" />
+  </g>
+</svg>
