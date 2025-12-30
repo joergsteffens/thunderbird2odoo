@@ -17,23 +17,38 @@ function notify(title, message) {
   });
 }
 
-// create a context menu
-browser.menus.create({
-  id: "send-to-odoo",
-  title: "Import Email into Odoo",
-  contexts: ["message_list"],
-  icons: {
-    16: "icons/odoo-16.png",
-    32: "icons/odoo-32.png",
-    48: "icons/odoo-48.png",
-    96: "icons/odoo-96.png",
-    128: "icons/odoo-128.png",
-  },
-});
+async function get_config() {
+  // load Odoo config from options
+  const cfg = await browser.storage.local.get(["url", "db", "apikey"]);
+  return cfg;
+}
+
+async function setup() {
+  browser.menus.removeAll();
+  const cfg = await get_config();
+  try {
+    await testOdooConnection(cfg);
+  } catch (err) {
+    console.log("setup error: " + err);
+    return;
+  }
+  // create a context menu
+  browser.menus.create({
+    id: "send-to-odoo",
+    title: "Import Email into Odoo",
+    contexts: ["message_list"],
+    icons: {
+      16: "icons/odoo-16.png",
+      32: "icons/odoo-32.png",
+      48: "icons/odoo-48.png",
+      96: "icons/odoo-96.png",
+      128: "icons/odoo-128.png",
+    },
+  });
+}
 
 // handle menu click
 browser.menus.onClicked.addListener(async (info) => {
-  console.log("menus clicked");
   if (info.menuItemId !== "send-to-odoo") return;
 
   const message = info.selectedMessages?.messages?.[0];
@@ -46,11 +61,14 @@ browser.menus.onClicked.addListener(async (info) => {
     const rawMail = await messenger.messages.getRaw(message.id);
 
     // load Odoo config from options
-    const cfg = await browser.storage.local.get(["url", "db", "apikey"]);
+    const cfg = await get_config();
 
-    await uploadMail(cfg, rawMail);
+    const import_result = await uploadMail(cfg, rawMail);
 
-    notify("Odoo", "Email successfully transferred to Odoo.");
+    notify(
+      "Odoo",
+      "Email successfully transferred to Odoo (" + import_result + ")",
+    );
   } catch (err) {
     notify("Odoo – Error", "Failed to send email: " + err.message);
   }
@@ -64,6 +82,11 @@ browser.runtime.onMessage.addListener(async (msg) => {
       return { ok: true };
     }
 
+    if (msg.action === "setup") {
+      await setup();
+      return { ok: true };
+    }
+
     if (msg.action === "uploadMail") {
       await uploadMail(msg.config, msg.rawMail);
       return { ok: true };
@@ -72,3 +95,5 @@ browser.runtime.onMessage.addListener(async (msg) => {
     return { ok: false, error: err.message };
   }
 });
+
+await setup();

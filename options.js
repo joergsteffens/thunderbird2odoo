@@ -10,8 +10,8 @@ let lastValidHash = null;
 function getConfig() {
   return {
     url: urlInput.value.trim(),
-    db: dbInput.value.trim() || null,
     apikey: apiKeyInput.value.trim(),
+    db: dbInput.value.trim() || null,
   };
 }
 
@@ -72,5 +72,10 @@ document.getElementById("settings").addEventListener("submit", async (e) => {
   }
 
   await browser.storage.local.set(cfg);
+
+  const result = await browser.runtime.sendMessage({
+    action: "setup",
+  });
+
   status.textContent = "Settings saved";
 });
