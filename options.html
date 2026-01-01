@@ -1,34 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Odoo Email Importer – Settings</title>
-</head>
-<body>
-  <h2>Odoo Connection</h2>
+  <head>
+    <meta charset="utf-8" />
+    <title>Odoo Email Importer – Settings</title>
+  </head>
+  <body>
+    <h2>Odoo Connection</h2>
 
-  <form id="settings">
-    <label>
-      Odoo URL:<br>
-      <input id="url" type="text" placeholder="https://my.odoo.com">
-    </label><br><br>
+    <form id="settings">
+      <label>
+        Odoo URL:<br />
+        <input id="url" type="text" placeholder="https://my.odoo.com" /> </label
+      ><br /><br />
 
-    <label>
-      API Key:<br>
-      <input id="apikey" type="password">
-    </label><br><br>
+      <label>
+        API Key:<br />
+        <input id="apikey" type="password" /> </label
+      ><br /><br />
 
-    <label>
-      Database (optional):<br>
-      <input id="db" type="text">
-    </label><br><br>
+      <label>
+        Database (optional):<br />
+        <input id="db" type="text" /> </label
+      ><br /><br />
 
-    <button id="test" type="button">Test connection</button>
-    <button id="save" type="submit" disabled>Save</button>
-  </form>
+      <fieldset>
+        <legend>Import Emails to following Odoo models</legend>
 
-  <p id="status"></p>
+        <label>
+          <input
+            type="checkbox"
+            value="false"
+            title="May require 'Lost Messages Routing' or similar Odoo extensions."
+          />
+          Generic* </label
+        ><br />
 
-  <script type="module" src="options.js"></script>
-</body>
+        <label>
+          <input type="checkbox" value="crm.lead" />
+          CRM Lead </label
+        ><br />
+      </fieldset>
+
+      <button id="test" type="button">Test connection</button>
+      <button id="save" type="submit" disabled>Save</button>
+    </form>
+
+    <p id="status"></p>
+
+    <script type="module" src="options.js"></script>
+  </body>
 </html>

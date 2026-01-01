@@ -5,6 +5,7 @@ const testBtn = document.getElementById("test");
 const saveBtn = document.getElementById("save");
 const status = document.getElementById("status");
 
+const DEFAULT_MODELS = ["false", "crm.lead"];
 let lastValidHash = null;
 
 function getConfig() {
@@ -12,6 +13,9 @@ function getConfig() {
     url: urlInput.value.trim(),
     apikey: apiKeyInput.value.trim(),
     db: dbInput.value.trim() || null,
+    models: Array.from(
+      document.querySelectorAll("input[type=checkbox]:checked"),
+    ).map((cb) => cb.value),
   };
 }
 
@@ -26,10 +30,22 @@ function invalidate() {
 }
 
 (async () => {
-  const stored = await browser.storage.local.get(["url", "db", "apikey"]);
+  const stored = await browser.storage.local.get([
+    "url",
+    "db",
+    "apikey",
+    "models",
+  ]);
   if (stored.url) urlInput.value = stored.url;
   if (stored.db) dbInput.value = stored.db;
   if (stored.apikey) apiKeyInput.value = stored.apikey;
+  let models = DEFAULT_MODELS;
+  if (stored.models) models = stored.models;
+
+  document.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+    cb.checked = models.includes(cb.value);
+  });
+
   invalidate();
 })();
 
@@ -42,6 +58,11 @@ testBtn.addEventListener("click", async () => {
 
   if (!cfg.url || !cfg.apikey) {
     status.textContent = "URL and API key are required";
+    return;
+  }
+
+  if (cfg.models.length === 0) {
+    status.textContent = "At least one Odoo model must be selected";
     return;
   }
 

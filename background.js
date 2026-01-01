@@ -1,10 +1,12 @@
 /********************************************************************
- * Odoo Mail Import – Thunderbird MailExtension
+ * Odoo Mail Importer – Thunderbird MailExtension
  * Odoo >= 19
  ********************************************************************/
 
 import { testOdooConnection } from "./lib/odooClient.js";
 import { uploadMail } from "./lib/odooMailUpload.js";
+
+const MENU_ID_PREFIX = "send-to-odoo";
 
 function notify(title, message) {
   console.log(title + ": " + message);
@@ -19,7 +21,12 @@ function notify(title, message) {
 
 async function get_config() {
   // load Odoo config from options
-  const cfg = await browser.storage.local.get(["url", "db", "apikey"]);
+  const cfg = await browser.storage.local.get([
+    "url",
+    "db",
+    "apikey",
+    "models",
+  ]);
   return cfg;
 }
 
@@ -32,24 +39,41 @@ async function setup() {
     console.log("setup error: " + err);
     return;
   }
-  // create a context menu
-  browser.menus.create({
-    id: "send-to-odoo",
-    title: "Import Email into Odoo",
-    contexts: ["message_list"],
-    icons: {
-      16: "icons/odoo-16.png",
-      32: "icons/odoo-32.png",
-      48: "icons/odoo-48.png",
-      96: "icons/odoo-96.png",
-      128: "icons/odoo-128.png",
-    },
-  });
+
+  for (const item of cfg.models) {
+    let model = false;
+    let id = MENU_ID_PREFIX;
+    let title = "Import Email into Odoo";
+    if (item !== "false") {
+      model = item;
+      id = MENU_ID_PREFIX + "-" + model;
+      title = "Import Email into Odoo as " + model;
+    }
+    // create a context menu
+    browser.menus.create({
+      id: id,
+      title: title,
+      contexts: ["message_list"],
+      icons: {
+        16: "icons/odoo-16.png",
+        32: "icons/odoo-32.png",
+        48: "icons/odoo-48.png",
+        96: "icons/odoo-96.png",
+        128: "icons/odoo-128.png",
+      },
+    });
+  }
 }
 
 // handle menu click
 browser.menus.onClicked.addListener(async (info) => {
-  if (info.menuItemId !== "send-to-odoo") return;
+  if (!info.menuItemId.startsWith(MENU_ID_PREFIX)) return;
+
+  // extract string after: prefix + "-"
+  let model = info.menuItemId.slice(MENU_ID_PREFIX.length + 1);
+  if (!model) {
+    model = false;
+  }
 
   const message = info.selectedMessages?.messages?.[0];
   if (!message) {
@@ -63,12 +87,24 @@ browser.menus.onClicked.addListener(async (info) => {
     // load Odoo config from options
     const cfg = await get_config();
 
-    const import_result = await uploadMail(cfg, rawMail);
+    const import_result = await uploadMail(cfg, rawMail, model);
 
-    notify(
-      "Odoo",
-      "Email successfully transferred to Odoo (" + import_result + ")",
-    );
+    if (!model) {
+      notify("Odoo", "Email successfully transferred to Odoo");
+    } else if (import_result) {
+      notify(
+        "Odoo",
+        "Email successfully transferred to Odoo as " +
+          model +
+          " " +
+          import_result,
+      );
+    } else {
+      notify(
+        "Odoo",
+        "Failed to import Email as " + model + ". Maybe it is already present?",
+      );
+    }
   } catch (err) {
     notify("Odoo – Error", "Failed to send email: " + err.message);
   }

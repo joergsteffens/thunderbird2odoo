@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Odoo Email Importer",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Transfer selected email to Odoo",
   "browser_specific_settings": {
     "gecko": { "id": "@thunderbird2odoo.bareos.joergsteffens" }
