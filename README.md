@@ -1,10 +1,12 @@
+![Odoo Email Importer](thunderbird2odoo.svg)
+
 # Odoo Email Importer
 
 This Thunderbird Plugin allows to export email from Thunderbird an into the ERP software [Odoo](https://www.odoo.com).
 
 ## Requirements
 
-* odoo >= 19 (as the [External JSON-2 API)[https://www.odoo.com/documentation/19.0/developer/reference/external_api.html] have been introduced in Odoo 19)
+* odoo >= 19 (as the [External JSON-2 API](https://www.odoo.com/documentation/19.0/developer/reference/external_api.html) have been introduced in Odoo 19)
 * Optional:
   * https://apps.odoo.com/apps/modules/19.0/mail_manual_routing to handle new and unrelated emails, that are otherwise not visible/lost in Odoo. For details, see https://faotools.com/apps/19.0/lost-messages-routing-19-0-mail-manual-routing-1037
     * Without this extension, emails imported as "Generic" may not be visible for you. However, you can still import them as "Lead". Make sure to active Leads in Odoo by:
@@ -16,8 +18,8 @@ This Thunderbird Plugin allows to export email from Thunderbird an into the ERP 
   * for importing emails as leads, activate Settings -> General Settings -> CRM -> Leads
   * get an API key (User -> My Preferences -> Security -> API Keys -> Add API key, see https://www.odoo.com/documentation/19.0/developer/reference/external_api.html#configuration)
 * Thunderbird:
-  * Add the addon "Odoo Email Importer".
-  * Configure "Odoo Email Importer":
+  * Install the addon [Odoo Email Importer](https://addons.thunderbird.net/thunderbird/addon/odoo-email-importer/) (this addon)
+  * Configure "Odoo Email Importer": ![Odoo Email Importer: Setup](images/OdooEmailImporter-configure.png)
     * Set "Odoo URL" to your Odoo server.
     * Set the generated API Key into the API Key field.
     * Set the Odoo database, if it is required (normally it is not required)
