@@ -25,14 +25,14 @@ import {
   CACHE_KEY,
 } from "./lib/mailCache.js";
 
-const MENU_ID_IMPORTER = "odoo-importer";
+const MENU_ID_CONNECTOR = "odoo-connector";
 const MENU_ID_IMPORT = "odoo-import";
 const MENU_ID_VERIFY = "odoo-verify";
 const MENU_ID_SYNC = "odoo-sync";
 
 const menuIds = new Set();
 menuIds
-  .add(MENU_ID_IMPORTER)
+  .add(MENU_ID_CONNECTOR)
   .add(MENU_ID_IMPORT)
   .add(MENU_ID_VERIFY)
   .add(MENU_ID_SYNC);
@@ -257,7 +257,7 @@ async function setup() {
   };
 
   browser.menus.create({
-    id: MENU_ID_IMPORTER,
+    id: MENU_ID_CONNECTOR,
     title: "Odoo Email Connector",
     contexts: ["message_list"],
     icons: icon,
@@ -266,7 +266,7 @@ async function setup() {
   browser.menus.create({
     id: MENU_ID_IMPORT,
     title: "Import this email",
-    parentId: MENU_ID_IMPORTER,
+    parentId: MENU_ID_CONNECTOR,
     contexts: ["message_list"],
     icons: icon,
   });
@@ -274,7 +274,7 @@ async function setup() {
   browser.menus.create({
     id: MENU_ID_VERIFY,
     title: "Verify",
-    parentId: MENU_ID_IMPORTER,
+    parentId: MENU_ID_CONNECTOR,
     contexts: ["message_list"],
     icons: icon,
   });
@@ -282,7 +282,7 @@ async function setup() {
   browser.menus.create({
     id: MENU_ID_SYNC,
     title: "Sync message status from Odoo",
-    parentId: MENU_ID_IMPORTER,
+    parentId: MENU_ID_CONNECTOR,
     contexts: ["message_list"],
     icons: icon,
   });
@@ -291,7 +291,7 @@ async function setup() {
 browser.menus.onShown.addListener((info) => {
   if (menuIds.size === 0) return;
   const selectedCount = info.selectedMessages?.messages?.length ?? 0;
-  browser.menus.update(MENU_ID_IMPORTER, { visible: selectedCount >= 1 });
+  browser.menus.update(MENU_ID_CONNECTOR, { visible: selectedCount >= 1 });
   browser.menus.update(MENU_ID_IMPORT, { visible: selectedCount === 1 });
   browser.menus.update(MENU_ID_VERIFY, {
     visible: selectedCount >= 1,

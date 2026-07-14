@@ -21,7 +21,7 @@ This Thunderbird add-on imports emails into the ERP software [Odoo](https://www.
     * Set **Odoo URL** to your Odoo server.
     * Set **API Key**.
     * Set **Database** if required (normally not).
-    * ![Odoo Email Connector: options window](images/OdooEmailImporter-configure.png)
+    * ![Odoo Email Connector: options window](images/OdooEmailConnector-configure.png)
   * Click *Test connection* — you will be prompted to grant host permission. If successful, click *Save*.
 
 ## Usage

@@ -2,7 +2,7 @@
 # Thunderbird Add-on Makefile
 # --------------------------------------------------
 
-ADDON_NAME := odoo-mail-importer
+ADDON_NAME := odoo-mail-connector
 VERSION := $(shell jq -r '.version' manifest.json)
 DIST_DIR := dist
 XPI := $(DIST_DIR)/$(ADDON_NAME)-$(VERSION).xpi
