@@ -706,18 +706,11 @@ async function handleGetOdooStatus(sender) {
   const m = await messenger.messages.get(msgId);
   const mid = unifyMessageId(m.headerMessageId);
   if (!mid) {
-    console.debug("getOdooStatus: no mid");
+    console.debug("getOdooStatus: no message_id in email");
     return null;
   }
-  const cfg = await requireConfig();
-  if (!cfg) {
-    console.debug("getOdooStatus: not configured");
-    return null;
-  }
+  console.debug("getOdooStatus: mid=" + mid);
   let entry = await getCachedResult(mid);
-  console.debug(
-    "getOdooStatus: mid=" + mid + " cached=" + JSON.stringify(entry),
-  );
   if (!entry) {
     const headers = await getHeaders(msgId);
     const pids = extractPredecessorIdsFromHeaders(headers);
@@ -728,13 +721,18 @@ async function handleGetOdooStatus(sender) {
         break;
       }
     }
-    if (!entry) {
-      console.debug("getOdooStatus: no entry found");
-      return null;
-    }
+  }
+  if (!entry) {
+    console.debug("getOdooStatus: no entry found");
+    return null;
+  }
+  const cfg = await requireConfig();
+  if (!cfg) {
+    console.debug("getOdooStatus: not configured");
+    return null;
   }
   entry = await enrichFull(cfg, entry);
-  console.debug("getOdooStatus: returning entry=" + JSON.stringify(entry));
+  console.debug("getOdooStatus: returning " + JSON.stringify(entry));
   return entry;
 }
 
