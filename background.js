@@ -785,50 +785,40 @@ async function handleCountOdooMessages(msg) {
   }
 }
 
-browser.runtime.onMessage.addListener(async (msg, sender) => {
+browser.runtime.onMessage.addListener((msg, sender) => {
   try {
-    if (msg.action === "testConnection") {
-      const info = await getConnectionInfo(msg.config);
-      return { ok: true, info };
-    }
+    switch (msg.action) {
+      case "testConnection":
+        return getConnectionInfo(msg.config).then((info) => ({ ok: true, info }));
 
-    if (msg.action === "setup") {
-      await setup();
-      return { ok: true };
-    }
+      case "setup":
+        return setup().then(() => ({ ok: true }));
 
-    if (msg.action === "getOdooStatus") {
-      return await handleGetOdooStatus(sender);
-    }
+      case "getOdooStatus":
+        return handleGetOdooStatus(sender);
 
-    if (msg.action === "verifyMessage") {
-      return await handleVerifyMessage(msg, sender);
-    }
+      case "verifyMessage":
+        return handleVerifyMessage(msg, sender);
 
-    if (msg.action === "addMessage") {
-      return await handleAddMessage(msg, sender);
-    }
+      case "addMessage":
+        return handleAddMessage(msg, sender);
 
-    if (msg.action === "countOdooMessages") {
-      return await handleCountOdooMessages(msg);
-    }
+      case "countOdooMessages":
+        return handleCountOdooMessages(msg);
 
-    if (msg.action === "clearCache") {
-      await clearAllCache();
-      return { ok: true };
-    }
+      case "clearCache":
+        return clearAllCache().then(() => ({ ok: true }));
 
-    if (msg.action === "syncFromOdoo") {
-      return await syncFromOdoo();
-    }
+      case "syncFromOdoo":
+        return syncFromOdoo();
 
-    if (msg.action === "getCacheInfo") {
-      const size = await getCacheSize();
-      const lastSync = await getLastSync();
-      return { size, lastSync };
+      case "getCacheInfo":
+        return Promise.all([getCacheSize(), getLastSync()]).then(
+          ([size, lastSync]) => ({ size, lastSync }),
+        );
     }
   } catch (err) {
-    return errorResult(err);
+    return Promise.resolve(errorResult(err));
   }
 });
 
