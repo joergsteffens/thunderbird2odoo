@@ -1,0 +1,1 @@
+Links Thunderbird emails to Odoo objects. A status bar shows if the email is known in Odoo with links to the record. Supports syncing message ids from Odoo, batch-verify, and predecessor lookup. Emails not found can be imported. Requires Odoo 19+.

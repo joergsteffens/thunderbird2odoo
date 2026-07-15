@@ -1,8 +1,9 @@
-Odoo Email Connector is a Thunderbird add-on that allows you to export emails
-from Thunderbird into the ERP software <a href="https://www.odoo.com">Odoo</a>.
+<strong>Odoo Email Connector</strong> is a Thunderbird add-on that links emails to objects in
+the ERP software <a href="https://www.odoo.com">Odoo</a>.
 An <strong>email status card</strong> appears above each message, showing
 whether it is already known in Odoo with direct links to the corresponding
 record.
+
 
 <b>Requirements</b>
 
@@ -21,6 +22,7 @@ record.
     </li>
   </ul>
 </ul>
+
 
 <b>Setup</b>
 
@@ -50,32 +52,67 @@ record.
   </ul>
 </ul>
 
+
 <b>Usage</b>
 
 <ul>
   <li>
-    <strong>Email status card</strong> — When viewing an email, a status bar at
-    the top shows whether it is known in Odoo (<em>found</em> with a green dot,
-    <em>not found</em> with a red cross). Click the Odoo links to open the
-    record. If only a predecessor email is known, the bar shows an amber dot and
-    a link to the parent.
+    <strong>Email status bar</strong> — When viewing an email, a status bar at
+    the top shows whether it is known in Odoo. Click the Odoo links to open the
+    record.
+
+    The operation behind it will only query the local cache. It will not
+    contact the Odoo server. The status bar will only be displayed, when
+    information is found in the cache. Update the cache by
+    <em>Verify</em> (search specific message IDs in Odoo) or
+    <em>Sync</em> (retrieve the message IDs of all messages stored in Odoo and
+    store them in the local cache).
   </li>
+  <ul>
+    <li>Status</li>
+    <ul>
+      <li><strong>found</strong> — Email found in Odoo.</li>
+      <li>
+        <strong>parent found</strong> — This email is not found in Odoo, but its
+        predecessor (from In-Reply-To / References headers) is.
+      </li>
+      <li>
+        <strong>not found</strong> — Neither this email nor its predecessor is
+        found in Odoo.
+      </li>
+    </ul>
+    <li>Actions</li>
+    <ul>
+      <li>
+        <strong>Verify</strong> — Click the <em>Verify</em> button in the status
+        card to check if the current email exists in Odoo.
+      </li>
+      <li>
+        <strong>Add</strong> — Click the <em>Add</em> button to upload this
+        email to Odoo.
+      </li>
+    </ul>
+  </ul>
   <li>
-    <strong>Verify</strong> — Click the <em>Verify</em> button in the status
-    card to check if the current email exists in Odoo. You can also verify
-    multiple emails at once via right-click → <em>Odoo Email Connector</em> →
-    <em>Verify</em> in the message list.
+    <strong>Odoo Email Connector</strong> — Select a message or multiple
+    messages and right-click and select the
+    <em>Odoo Email Connector</em> sub-menu.
   </li>
-  <li>
-    <strong>Import</strong> — Right-click an email and select
-    <em>Odoo Email Connector</em> → <em>Import this email</em>. If a predecessor
-    (In-Reply-To / References) is already in Odoo, you will be asked to confirm
-    before importing.
-  </li>
-  <li>
-    <strong>Sync from Odoo</strong> — Right-click in the message list and select
-    <em>Odoo Email Connector</em> → <em>Sync from Odoo</em> to batch-cache the
-    Odoo status of recent emails, making the status card show results instantly
-    without individual lookups.
-  </li>
+  <ul>
+    <li>
+      <strong>Import</strong> — Upload this email to Odoo. A popup appears to
+      ask additional questions.
+    </li>
+    <li>
+      <strong>Verify</strong> — Updates the Odoo status of one or multiple
+      emails. This will query the Odoo server to check if these messages are
+      stored in Odoo.
+    </li>
+    <li>
+      <strong>Sync from Odoo</strong> — Batch-cache the Odoo status of recent
+      emails, making the status card show results instantly without individual
+      lookups.
+    </li>
+  </ul>
 </ul>
+
