@@ -8,9 +8,11 @@ import vm from "node:vm";
 import { createFakeBrowser, settle } from "./helpers/fakeBrowser.js";
 import { FakeDocument } from "./helpers/fakeDom.js";
 
-const SOURCES = ["../lib/domUtils.js", "../displayScript.js"].map((p) =>
-  readFileSync(new URL(p, import.meta.url), "utf8"),
-);
+const SOURCES = [
+  "../lib/importChoice.js",
+  "../lib/domUtils.js",
+  "../displayScript.js",
+].map((p) => readFileSync(new URL(p, import.meta.url), "utf8"));
 const TEAMS = [
   { id: 3, name: "Customer Care" },
   { id: 7, name: "Sales & Support" },

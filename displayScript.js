@@ -6,17 +6,14 @@ var _cachedTeams = [];
 var _cachedDefaultTeamId = null;
 var _cachedDefaultImportAs = null;
 
-// Same rules as getDefaultImportModel() in lib/importChoice.js (this display
-// script cannot import ES modules): Ticket only once Helpdesk teams were
-// loaded, otherwise Opportunity as before.
-function getDefaultImportAs() {
-  var available = _cachedTeams.length > 0;
-  if (
-    _cachedDefaultImportAs === "crm.lead" ||
-    _cachedDefaultImportAs === "generic"
-  )
-    return _cachedDefaultImportAs;
-  return available ? "helpdesk.ticket" : "crm.lead";
+// Config shape expected by lib/importChoice.js, which is injected before this
+// script and provides OdooImportChoice on the global scope.
+function getImportChoiceConfig() {
+  return {
+    helpdeskTeams: _cachedTeams,
+    helpdeskTeamId: _cachedDefaultTeamId,
+    defaultImportAs: _cachedDefaultImportAs,
+  };
 }
 
 function refreshTeamsCache() {
@@ -30,7 +27,8 @@ function refreshTeamsCache() {
         stored.helpdeskTeamId !== undefined ? stored.helpdeskTeamId : null;
       _cachedDefaultImportAs = stored.defaultImportAs || null;
     })
-    .catch(function () {
+    .catch(function (err) {
+      console.debug("refreshTeamsCache failed:", err);
       _cachedTeams = [];
       _cachedDefaultTeamId = null;
       _cachedDefaultImportAs = null;
@@ -180,53 +178,39 @@ function renderBar(d, container) {
   } else if (d.status === "not_found") {
     // No predecessor either: let the user pick the destination (Ticket +
     // team / Opportunity / Generic) right here instead of a popup dialog.
+    // lib/importChoice.js supplies the choices and the defaults.
+    var importChoiceCfg = getImportChoiceConfig();
     var selectStyle =
       "font:caption;padding:2px 4px;border:1px solid ButtonBorder;border-radius:3px";
 
     var importAsSelect = document.createElement("select");
     importAsSelect.style.cssText = selectStyle;
-    var importTypes = [
-      { value: "crm.lead", label: "Opportunity (CRM Lead)" },
-      { value: "generic", label: "Generic" },
-    ];
-    if (_cachedTeams.length > 0) {
-      importTypes.unshift({
-        value: "helpdesk.ticket",
-        label: "Ticket (Helpdesk)",
-      });
-    }
-    importTypes.forEach(function (o) {
-      var opt = document.createElement("option");
-      opt.value = o.value;
-      opt.textContent = o.label;
-      importAsSelect.appendChild(opt);
-    });
-    importAsSelect.value = getDefaultImportAs();
+    OdooImportChoice.getImportModelChoices(importChoiceCfg).forEach(
+      function (o) {
+        var opt = document.createElement("option");
+        opt.value = o.value;
+        opt.textContent = o.label;
+        importAsSelect.appendChild(opt);
+      },
+    );
+    importAsSelect.value =
+      OdooImportChoice.getDefaultImportModel(importChoiceCfg);
 
     var teamSelect = null;
-    if (_cachedTeams.length > 1) {
+    var teamChoices = OdooImportChoice.getTeamChoices(importChoiceCfg);
+    if (teamChoices) {
       teamSelect = document.createElement("select");
       teamSelect.style.cssText = selectStyle;
-      var hasDefaultTeam = _cachedTeams.some(function (t) {
-        return String(t.id) === String(_cachedDefaultTeamId);
-      });
-      if (!hasDefaultTeam) {
-        // No (valid) default team configured: let Odoo pick its default.
-        var noTeamOpt = document.createElement("option");
-        noTeamOpt.value = "";
-        noTeamOpt.textContent = "Default team";
-        teamSelect.appendChild(noTeamOpt);
-      }
-      _cachedTeams.forEach(function (t) {
+      teamChoices.options.forEach(function (o) {
         var opt = document.createElement("option");
-        opt.value = String(t.id);
-        opt.textContent = t.name;
+        opt.value = o.value;
+        opt.textContent = o.label;
         teamSelect.appendChild(opt);
       });
-      teamSelect.value = hasDefaultTeam ? String(_cachedDefaultTeamId) : "";
+      teamSelect.value = teamChoices.selected;
       var syncTeamVisibility = function () {
         teamSelect.style.display =
-          importAsSelect.value === "helpdesk.ticket" ? "" : "none";
+          importAsSelect.value === OdooImportChoice.MODEL_TICKET ? "" : "none";
       };
       importAsSelect.addEventListener("change", syncTeamVisibility);
       syncTeamVisibility();
@@ -240,7 +224,7 @@ function renderBar(d, container) {
         function () {
           var choice = { model: importAsSelect.value };
           if (
-            choice.model === "helpdesk.ticket" &&
+            choice.model === OdooImportChoice.MODEL_TICKET &&
             teamSelect &&
             teamSelect.value
           ) {
@@ -328,7 +312,8 @@ messenger.storage.onChanged.addListener(function (changes, area) {
       }
       refreshBar();
     }
-    if (["helpdeskTeams", "helpdeskTeamId", "defaultImportAs"].some(function (k) {
+    if (
+      ["helpdeskTeams", "helpdeskTeamId", "defaultImportAs"].some(function (k) {
         return k in changes;
       })
     ) {

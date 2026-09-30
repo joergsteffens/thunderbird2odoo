@@ -27,7 +27,7 @@ XPI_FILES := \
   $(ICON_DIR)
 
 # JS source files to syntax-check
-JS_FILES := background.js displayScript.js dialog.js options.js lib/mailCache.js lib/odooClient.js lib/odooMailUpload.js lib/importChoice.js lib/predecessor.js
+JS_FILES := background.js displayScript.js dialog.js options.js $(wildcard lib/*.js)
 
 .PHONY: all check check-js test generate-icons xpi clean clean-icons distclean
 
@@ -78,7 +78,7 @@ check-js:
 test:
 	@command -v node >/dev/null || \
 	  (echo "ERROR: node not installed (needed for tests)" && exit 1)
-	node --test
+	node --test test/*.test.js
 
 # --------------------------------------------------
 # Cleanup

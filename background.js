@@ -31,15 +31,20 @@ import {
   CACHE_KEY,
 } from "./lib/mailCache.js";
 import { findPredecessor as findPredecessorIn } from "./lib/predecessor.js";
-import {
+// lib/importChoice.js is a plain script (shared with the message display
+// scripts), so it publishes its API on globalThis instead of exporting it.
+import "./lib/importChoice.js";
+
+const {
   MODEL_TICKET,
   MODEL_LEAD,
   MODEL_GENERIC,
   getTeamChoices,
-  isHelpdeskAvailable,
+  getImportModelChoices,
+  getModelLabel,
   resolveImportModel,
   resolveTeamId,
-} from "./lib/importChoice.js";
+} = globalThis.OdooImportChoice;
 
 const MENU_ID_CONNECTOR = "odoo-connector";
 const MENU_ID_IMPORT = "odoo-import";
@@ -444,26 +449,24 @@ async function openDialog(title, message, buttons = [], selects = []) {
  * @returns {Promise<{model:string, teamId?:string}|null>} null if closed
  */
 async function askImportChoice(cfg) {
-  const buttons = [
-    { title: "As Opportunity (CRM Lead)", value: MODEL_LEAD },
-    {
-      title: "Generic",
-      value: MODEL_GENERIC,
-      tooltip:
-        "Might fail on Odoo 19 without Lost Messages module, see https://github.com/joergsteffens/thunderbird2odoo",
-    },
-  ];
+  const buttons = getImportModelChoices(cfg).map((c) => {
+    const button = {
+      title: c.value === MODEL_GENERIC ? c.label : "As " + c.label,
+      value: c.value,
+    };
+    if (c.value === MODEL_GENERIC)
+      button.tooltip =
+        "Might fail on Odoo 19 without Lost Messages module, see https://github.com/joergsteffens/thunderbird2odoo";
+    return button;
+  });
   const selects = [];
-  if (isHelpdeskAvailable(cfg)) {
-    buttons.unshift({ title: "As Ticket (Helpdesk)", value: MODEL_TICKET });
-    const teams = getTeamChoices(cfg);
-    if (teams) {
-      selects.push({
-        id: "team",
-        label: "Helpdesk team (for tickets)",
-        ...teams,
-      });
-    }
+  const teams = getTeamChoices(cfg);
+  if (teams) {
+    selects.push({
+      id: "team",
+      label: "Helpdesk team (for tickets)",
+      ...teams,
+    });
   }
   const { choice, values } = await openDialog(
     "Odoo Email Connector",
@@ -531,27 +534,22 @@ async function importMessageById(tbMessageId, choice = null) {
   if (!choice) return mid;
 
   const model = resolveImportModel(choice, cfg);
+  const importedAs = "Email imported as " + getModelLabel(model);
   if (model === MODEL_TICKET) {
     const teamId = resolveTeamId(choice, cfg);
     const customValues = teamId ? { team_id: teamId } : null;
     await uploadAndShowResult(
       cfg,
       MODEL_TICKET,
-      "Email imported as Ticket",
+      importedAs,
       decoded,
       mid,
       customValues,
     );
   } else if (model === MODEL_LEAD) {
-    await uploadAndShowResult(
-      cfg,
-      MODEL_LEAD,
-      "Email imported as Opportunity (CRM Lead)",
-      decoded,
-      mid,
-    );
+    await uploadAndShowResult(cfg, MODEL_LEAD, importedAs, decoded, mid);
   } else {
-    await uploadAndShowResult(cfg, false, "Email imported", decoded, mid);
+    await uploadAndShowResult(cfg, false, importedAs, decoded, mid);
   }
   return mid;
 }
@@ -970,7 +968,11 @@ async function registerDisplayScript() {
   }
   try {
     await ns.register({
-      js: [{ file: "lib/domUtils.js" }, { file: "displayScript.js" }],
+      js: [
+        { file: "lib/importChoice.js" },
+        { file: "lib/domUtils.js" },
+        { file: "displayScript.js" },
+      ],
     });
     console.debug("registerDisplayScript: registered");
   } catch (err) {

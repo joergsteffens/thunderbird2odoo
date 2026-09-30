@@ -1,3 +1,5 @@
+const { toTeamId, MODEL_TICKET } = globalThis.OdooImportChoice;
+
 const urlInput = document.getElementById("url");
 const dbInput = document.getElementById("db");
 const apiKeyInput = document.getElementById("apikey");
@@ -54,7 +56,7 @@ function setSyncEnabled(enabled) {
 
 function applyHelpdeskAvailability() {
   for (const opt of defaultImportAsInput.options) {
-    if (opt.value === "helpdesk.ticket") opt.disabled = !helpdeskAvailable;
+    if (opt.value === MODEL_TICKET) opt.disabled = !helpdeskAvailable;
   }
   helpdeskTeamIdInput.disabled = !syncEnabled || !helpdeskAvailable;
   helpdeskNote.textContent = helpdeskAvailable
@@ -254,12 +256,12 @@ loadTeamsBtn.addEventListener("click", () => loadTeams());
 
 saveTicketBtn.addEventListener("click", async () => {
   try {
-    const teamId = helpdeskTeamIdInput.value;
+    const teamId = toTeamId(helpdeskTeamIdInput.value);
     const importAs = defaultImportAsInput.value;
     const toRemove = [];
     const toSet = { rewriteDeliveredTo: rewriteDeliveredToInput.checked };
-    if (teamId === "") toRemove.push("helpdeskTeamId");
-    else toSet.helpdeskTeamId = parseInt(teamId, 10);
+    if (teamId === null) toRemove.push("helpdeskTeamId");
+    else toSet.helpdeskTeamId = teamId;
     if (importAs === "") toRemove.push("defaultImportAs");
     else toSet.defaultImportAs = importAs;
     if (toRemove.length) await browser.storage.local.remove(toRemove);

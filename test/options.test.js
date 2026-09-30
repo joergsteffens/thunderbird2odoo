@@ -12,6 +12,10 @@ import { documentFromHtml } from "./helpers/fakeDom.js";
 
 const HTML = readFileSync(new URL("../options.html", import.meta.url), "utf8");
 const SCRIPT = readFileSync(new URL("../options.js", import.meta.url), "utf8");
+const CHOICE = readFileSync(
+  new URL("../lib/importChoice.js", import.meta.url),
+  "utf8",
+);
 const CONFIG = { url: "https://odoo.example.com", apikey: "k" };
 const TEAMS = [
   { id: 3, name: "Customer Care" },
@@ -41,6 +45,7 @@ function openOptions(storage, background = {}) {
   const document = documentFromHtml(HTML);
   const context = { browser: fb.browser, document, console };
   vm.createContext(context);
+  vm.runInContext(CHOICE, context);
   vm.runInContext(SCRIPT, context);
   const el = (id) => document.getElementById(id);
   const requests = () =>

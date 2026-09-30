@@ -1,12 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
+import "../lib/importChoice.js";
+
+const {
   getDefaultImportModel,
+  getImportModelChoices,
+  getModelLabel,
   getTeamChoices,
   isHelpdeskAvailable,
   resolveImportModel,
   resolveTeamId,
-} from "../lib/importChoice.js";
+  toTeamId,
+} = globalThis.OdooImportChoice;
 
 const TEAMS = [
   { id: 3, name: "Customer Care" },
@@ -139,4 +144,35 @@ test("getTeamChoices ignores a configured team missing from the list", () => {
   const choices = getTeamChoices({ helpdeskTeams: TEAMS, helpdeskTeamId: 99 });
   assert.equal(choices.selected, "");
   assert.equal(choices.options[0].label, "Default team");
+});
+
+test("toTeamId keeps positive integers and rejects everything else", () => {
+  assert.equal(toTeamId(7), 7);
+  assert.equal(toTeamId("7"), 7);
+  assert.equal(toTeamId(""), null);
+  assert.equal(toTeamId("abc"), null);
+  assert.equal(toTeamId(0), null);
+  assert.equal(toTeamId(-3), null);
+  assert.equal(toTeamId(undefined), null);
+});
+
+test("getImportModelChoices omits Ticket without Helpdesk", () => {
+  assert.deepEqual(
+    getImportModelChoices({}).map((c) => c.value),
+    ["crm.lead", "generic"],
+  );
+});
+
+test("getImportModelChoices puts Ticket first once Helpdesk is available", () => {
+  assert.deepEqual(
+    getImportModelChoices({ helpdeskTeams: TEAMS }).map((c) => c.value),
+    ["helpdesk.ticket", "crm.lead", "generic"],
+  );
+});
+
+test("getModelLabel returns the display label", () => {
+  assert.equal(getModelLabel("helpdesk.ticket"), "Ticket (Helpdesk)");
+  assert.equal(getModelLabel("crm.lead"), "Opportunity (CRM Lead)");
+  assert.equal(getModelLabel("generic"), "Generic");
+  assert.equal(getModelLabel("x.y"), "x.y");
 });
