@@ -320,20 +320,20 @@ messenger.runtime.onMessage.addListener(function (msg) {
 });
 
 messenger.storage.onChanged.addListener(function (changes, area) {
-  if (area === "local" && changes.odooMailCache) {
-    if (_ignoreNextCacheChange) {
-      _ignoreNextCacheChange = false;
-      return;
+  if (area === "local") {
+    if (changes.odooMailCache) {
+      if (_ignoreNextCacheChange) {
+        _ignoreNextCacheChange = false;
+        return;
+      }
+      refreshBar();
     }
-    refreshBar();
-  }
-  if (
-    area === "local" &&
-    ["helpdeskTeams", "helpdeskTeamId", "defaultImportAs"].some(function (k) {
-      return k in changes;
-    })
-  ) {
-    refreshTeamsCache().then(refreshBar);
+    if (["helpdeskTeams", "helpdeskTeamId", "defaultImportAs"].some(function (k) {
+        return k in changes;
+      })
+    ) {
+      refreshTeamsCache().then(refreshBar);
+    }
   }
 });
 
