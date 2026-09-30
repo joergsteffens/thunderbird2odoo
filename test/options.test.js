@@ -166,6 +166,22 @@ test("Load teams from Odoo caches the teams and keeps the selection", async () =
   assert.equal(page.el("loadTeams").disabled, false);
 });
 
+test("Load teams does not rewrite storage when the list is unchanged", async () => {
+  const page = openOptions(
+    { ...CONFIG, helpdeskTeams: TEAMS, helpdeskTeamId: 7 },
+    { listHelpdeskTeams: () => ({ ok: true, teams: TEAMS }) },
+  );
+  await settle();
+  let writes = 0;
+  page.browser.storage.onChanged.addListener((changes) => {
+    if ("helpdeskTeams" in changes) writes++;
+  });
+  await page.el("loadTeams").click();
+  await settle();
+  assert.equal(writes, 0);
+  assert.equal(page.el("loadTeamsStatus").textContent, "2 teams");
+});
+
 test("Load teams without Helpdesk shows the error and keeps the cache", async () => {
   const page = openOptions(
     { ...CONFIG, helpdeskTeams: TEAMS, helpdeskTeamId: 7 },

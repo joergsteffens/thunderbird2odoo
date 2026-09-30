@@ -232,8 +232,13 @@ async function loadTeams(config) {
     fillTeamSelect(result.teams, wanted);
     // Cached so the import dialog and the status bar "Add" control can
     // offer the teams without calling Odoo on every click. An empty list
-    // (Helpdesk not installed) disables the Ticket options.
-    await browser.storage.local.set({ helpdeskTeams: result.teams });
+    // (Helpdesk not installed) disables the Ticket options. Only write when
+    // the list changed, so a repeated "Test connection" does not churn
+    // storage.onChanged (which re-renders the status bar).
+    const stored = await browser.storage.local.get("helpdeskTeams");
+    if (JSON.stringify(stored.helpdeskTeams) !== JSON.stringify(result.teams)) {
+      await browser.storage.local.set({ helpdeskTeams: result.teams });
+    }
     helpdeskAvailable = result.teams.length > 0;
     applyHelpdeskAvailability();
     if (result.available === false) {
