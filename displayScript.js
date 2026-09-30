@@ -16,7 +16,7 @@ function getImportChoiceConfig() {
   };
 }
 
-function refreshTeamsCache() {
+function refreshImportChoiceCache() {
   return messenger.storage.local
     .get(["helpdeskTeams", "helpdeskTeamId", "defaultImportAs"])
     .then(function (stored) {
@@ -28,7 +28,7 @@ function refreshTeamsCache() {
       _cachedDefaultImportAs = stored.defaultImportAs || null;
     })
     .catch(function (err) {
-      console.debug("refreshTeamsCache failed:", err);
+      console.debug("refreshImportChoiceCache failed:", err);
       _cachedTeams = [];
       _cachedDefaultTeamId = null;
       _cachedDefaultImportAs = null;
@@ -317,9 +317,9 @@ messenger.storage.onChanged.addListener(function (changes, area) {
         return k in changes;
       })
     ) {
-      refreshTeamsCache().then(refreshBar);
+      refreshImportChoiceCache().then(refreshBar);
     }
   }
 });
 
-refreshTeamsCache().then(refreshBar);
+refreshImportChoiceCache().then(refreshBar);
