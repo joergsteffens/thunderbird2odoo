@@ -382,3 +382,54 @@ test("Saving a connection change replaces the old connection's teams", async () 
   assert.deepEqual(page.storage.helpdeskTeams, []);
   assert.ok(!("helpdeskTeamId" in page.storage));
 });
+
+test("an invalid URL after a valid test shows the error instead of hanging", async () => {
+  const page = openOptions(
+    {},
+    {
+      testConnection: (msg) => {
+        if (msg.config.url.includes("bad")) {
+          throw new Error("Could not connect to Odoo");
+        }
+        return { ok: true, info: {} };
+      },
+    },
+  );
+  await settle();
+  await testConnection(page);
+  assert.equal(page.el("testStatus").textContent, "OK");
+  assert.equal(page.el("testStatus").style.color, "green");
+
+  // Change to an unreachable URL and test again.
+  page.el("url").value = "https://bad.example.com";
+  await page.el("url").dispatch("input");
+  await page.el("test").click();
+  await settle();
+  assert.equal(
+    page.el("testStatus").textContent,
+    "Failed: Could not connect to Odoo",
+  );
+  assert.equal(page.el("testStatus").style.color, "#c0392b");
+  // Nothing valid was tested, so saving stays disabled.
+  assert.equal(page.el("save").disabled, true);
+});
+
+test("the required-fields message is not shown in the previous green", async () => {
+  const page = openOptions(
+    {},
+    { testConnection: () => ({ ok: true, info: {} }) },
+  );
+  await settle();
+  await testConnection(page);
+  assert.equal(page.el("testStatus").style.color, "green");
+
+  page.el("url").value = "";
+  await page.el("url").dispatch("input");
+  await page.el("test").click();
+  await settle();
+  assert.equal(
+    page.el("testStatus").textContent,
+    "URL and API key are required",
+  );
+  assert.equal(page.el("testStatus").style.color, "#c0392b");
+});

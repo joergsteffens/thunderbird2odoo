@@ -1,5 +1,9 @@
 const { toTeamId } = globalThis.OdooImportChoice;
 
+// Status text colors for the options page.
+const OK_COLOR = "green";
+const ERROR_COLOR = "#c0392b";
+
 const urlInput = document.getElementById("url");
 const dbInput = document.getElementById("db");
 const apiKeyInput = document.getElementById("apikey");
@@ -139,6 +143,7 @@ testBtn.addEventListener("click", async () => {
 
   if (!cfg.url || !cfg.apikey) {
     testStatus.textContent = "URL and API key are required";
+    testStatus.style.color = ERROR_COLOR;
     return;
   }
 
@@ -147,35 +152,44 @@ testBtn.addEventListener("click", async () => {
   });
   if (!granted) {
     testStatus.textContent = "Host permission is required";
+    testStatus.style.color = ERROR_COLOR;
     return;
   }
   console.debug("testConnection: host permission granted");
 
   testStatus.textContent = "Testing…";
+  testStatus.style.color = "";
   saveBtn.disabled = true;
 
-  const result = await browser.runtime.sendMessage({
-    action: "testConnection",
-    config: cfg,
-  });
+  try {
+    const result = await browser.runtime.sendMessage({
+      action: "testConnection",
+      config: cfg,
+    });
 
-  if (result?.ok) {
-    lastValidHash = hash(cfg);
-    saveBtn.disabled = false;
-    const info = result.info;
-    let text = "OK";
-    if (info?.userInfo) {
-      const u = info.userInfo;
-      text += " as " + (u.login || "") + (u.name ? " (" + u.name + ")" : "");
+    if (result?.ok) {
+      lastValidHash = hash(cfg);
+      saveBtn.disabled = false;
+      const info = result.info;
+      let text = "OK";
+      if (info?.userInfo) {
+        const u = info.userInfo;
+        text += " as " + (u.login || "") + (u.name ? " (" + u.name + ")" : "");
+      }
+      testStatus.textContent = text;
+      testStatus.style.color = OK_COLOR;
+      // Also check whether Helpdesk is installed, so its options are only
+      // selectable where they make sense.
+      loadTeams(cfg);
+    } else {
+      testStatus.textContent = "Failed: " + (result?.error || "unknown error");
+      testStatus.style.color = ERROR_COLOR;
     }
-    testStatus.textContent = text;
-    testStatus.style.color = "green";
-    // Also check whether Helpdesk is installed, so its options are only
-    // selectable where they make sense.
-    loadTeams(cfg);
-  } else {
-    testStatus.textContent = "Failed: " + (result?.error || "unknown error");
-    testStatus.style.color = "#c0392b";
+  } catch (err) {
+    // sendMessage rejects when the background throws (e.g. an unreachable
+    // URL); without this the status would stay at "Testing…".
+    testStatus.textContent = "Failed: " + (err?.message || err);
+    testStatus.style.color = ERROR_COLOR;
   }
 });
 
@@ -268,11 +282,11 @@ async function loadTeams(config) {
     } else {
       loadTeamsStatus.textContent =
         result.teams.length + (result.teams.length === 1 ? " team" : " teams");
-      loadTeamsStatus.style.color = "green";
+      loadTeamsStatus.style.color = OK_COLOR;
     }
   } catch (err) {
     loadTeamsStatus.textContent = "Failed: " + err.message;
-    loadTeamsStatus.style.color = "#c0392b";
+    loadTeamsStatus.style.color = ERROR_COLOR;
   } finally {
     loadTeamsBtn.disabled = !syncEnabled;
   }
@@ -290,10 +304,10 @@ saveTicketBtn.addEventListener("click", async () => {
     if (toRemove.length) await browser.storage.local.remove(toRemove);
     await browser.storage.local.set(toSet);
     ticketStatus.textContent = "Saved";
-    ticketStatus.style.color = "green";
+    ticketStatus.style.color = OK_COLOR;
   } catch (err) {
     ticketStatus.textContent = "Failed: " + err.message;
-    ticketStatus.style.color = "#c0392b";
+    ticketStatus.style.color = ERROR_COLOR;
   }
 });
 

@@ -5,6 +5,11 @@ var _container = null;
 var _cachedTeams = [];
 var _cachedDefaultTeamId = null;
 
+// Status dot colors.
+var COLOR_FOUND = "#1b8a1b";
+var COLOR_PARENT_FOUND = "#d49a00";
+var COLOR_NOT_FOUND = "#c0392b";
+
 // Config shape expected by lib/importChoice.js, which is injected before this
 // script and provides OdooImportChoice on the global scope.
 function getImportChoiceConfig() {
@@ -73,13 +78,13 @@ function renderBar(d, container) {
     var e = document.createElement("span");
     if (status === "found") {
       e.textContent = " \u25CF";
-      e.style.color = "#1b8a1b";
+      e.style.color = COLOR_FOUND;
     } else if (status === "parent_found") {
       e.textContent = " \u25CF";
-      e.style.color = "#d49a00";
+      e.style.color = COLOR_PARENT_FOUND;
     } else if (status === "not_found") {
       e.textContent = " \u2715";
-      e.style.color = "#c0392b";
+      e.style.color = COLOR_NOT_FOUND;
     } else {
       return;
     }
