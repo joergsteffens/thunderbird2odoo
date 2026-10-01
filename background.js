@@ -448,7 +448,7 @@ async function openDialog(title, message, buttons = [], selects = []) {
  */
 async function askImportChoice(cfg) {
   const buttons = getImportModelChoices(cfg).map((c) => ({
-    title: c.value === MODEL_GENERIC ? c.label : "As " + c.label,
+    title: c.label,
     value: c.value,
     tooltip: c.tooltip,
   }));

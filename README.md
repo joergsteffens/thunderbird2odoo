@@ -70,7 +70,7 @@ Buttons in the bar:
 - **Add as Ticket (Helpdesk)**, **Add as Opportunity (CRM Lead)**, **Add as Generic** — shown when
   neither the email nor a predecessor is in Odoo: import it as that type with one click. *Ticket*
   only appears when Helpdesk is available; with several teams a team select follows it, preselected
-  with the *Default Helpdesk Team*.
+  with the *Default Helpdesk Team*. No type is preselected — the button you click decides.
 
 Results are cached per message and persist across restarts.
 

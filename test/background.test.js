@@ -131,7 +131,7 @@ test("without Helpdesk the dialog offers Opportunity and Generic as before", asy
   const dialog = importDialog(fb);
   assert.deepEqual(
     dialog.buttons.map((b) => b.title),
-    ["As Opportunity (CRM Lead)", "Generic"],
+    ["Opportunity (CRM Lead)", "Generic"],
   );
   assert.deepEqual(dialog.selects, []);
   assert.equal(uploads(fb).length, 0, "closing the dialog imports nothing");
@@ -143,7 +143,7 @@ test("with one team the dialog adds Ticket without a team select", async () => {
   const dialog = importDialog(fb);
   assert.deepEqual(
     dialog.buttons.map((b) => b.title),
-    ["As Ticket (Helpdesk)", "As Opportunity (CRM Lead)", "Generic"],
+    ["Ticket (Helpdesk)", "Opportunity (CRM Lead)", "Generic"],
   );
   assert.deepEqual(dialog.selects, []);
 });
