@@ -147,3 +147,13 @@ test("getModelLabel returns the display label", () => {
   assert.equal(getModelLabel("generic"), "Generic");
   assert.equal(getModelLabel("x.y"), "x.y");
 });
+
+test("resolveTeamId matches a configured team whose cached id is a string", () => {
+  assert.equal(
+    resolveTeamId(
+      {},
+      { helpdeskTeamId: 7, helpdeskTeams: [{ id: "7", name: "Support" }] },
+    ),
+    7,
+  );
+});
