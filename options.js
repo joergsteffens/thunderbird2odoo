@@ -43,6 +43,11 @@ let syncEnabled = false;
 // Helpdesk counts as available once teams were loaded (see
 // lib/importChoice.js); until then its options are shown greyed out.
 let helpdeskAvailable = false;
+// Connection identity (URL, API key, database) the cached teams belong to.
+let savedConnectionHash = null;
+// Teams fetched by "Test connection" for a connection that is not saved yet,
+// staged until that connection is saved ({ hash, teams, teamId }).
+let pendingHelpdesk = null;
 
 function setSyncEnabled(enabled) {
   syncEnabled = enabled;
@@ -106,6 +111,11 @@ function invalidate() {
     : [];
   fillTeamSelect(cachedTeams, stored.helpdeskTeamId);
   helpdeskAvailable = cachedTeams.length > 0;
+  savedConnectionHash = hash({
+    url: stored.url || "",
+    apikey: stored.apikey || "",
+    db: stored.db || null,
+  });
   invalidate();
   if (stored.url && stored.apikey) setSyncEnabled(true);
   refreshCacheInfo();
@@ -222,14 +232,33 @@ async function loadTeams(config) {
     const result = await browser.runtime.sendMessage(msg);
     if (!result?.ok) throw new Error(result?.error || "unknown error");
     fillTeamSelect(result.teams, wanted);
-    // Cached so the import dialog and the status bar "Add" control can
-    // offer the teams without calling Odoo on every click. An empty list
-    // (Helpdesk not installed) disables the Ticket import. Only write when
-    // the list changed, so a repeated "Test connection" does not churn
-    // storage.onChanged (which re-renders the status bar).
-    const stored = await browser.storage.local.get("helpdeskTeams");
-    if (JSON.stringify(stored.helpdeskTeams) !== JSON.stringify(result.teams)) {
-      await browser.storage.local.set({ helpdeskTeams: result.teams });
+    const testedHash = config ? hash(config) : savedConnectionHash;
+    if (config && testedHash !== savedConnectionHash) {
+      // "Test connection" for a connection that is not saved yet: stage the
+      // teams, so imports keep using the saved connection's teams until this
+      // one is saved (one connection's teams never leak into another).
+      pendingHelpdesk = {
+        hash: testedHash,
+        teams: result.teams,
+        teamId:
+          pendingHelpdesk?.hash === testedHash
+            ? pendingHelpdesk.teamId
+            : undefined,
+      };
+    } else {
+      // Teams for the saved connection ("Load teams from Odoo", or a Test
+      // connection of the saved settings). Cached so the import dialog and
+      // the status bar "Add" control can offer the teams without calling
+      // Odoo on every click. An empty list (Helpdesk not installed) disables
+      // the Ticket import. Only write when the list changed, so a repeated
+      // "Test connection" does not churn storage.onChanged (which re-renders
+      // the status bar).
+      const stored = await browser.storage.local.get("helpdeskTeams");
+      if (
+        JSON.stringify(stored.helpdeskTeams) !== JSON.stringify(result.teams)
+      ) {
+        await browser.storage.local.set({ helpdeskTeams: result.teams });
+      }
     }
     helpdeskAvailable = result.teams.length > 0;
     applyHelpdeskAvailability();
@@ -277,7 +306,31 @@ document.getElementById("settings").addEventListener("submit", async (e) => {
     return;
   }
 
+  const nextHash = hash(cfg);
   await browser.storage.local.set(cfg);
+
+  if (nextHash !== savedConnectionHash) {
+    // The connection changed: the cached teams belonged to the old one. Use
+    // the teams staged for this connection by "Test connection", if any, and
+    // drop them otherwise (they would point at teams of another server).
+    const pending = pendingHelpdesk?.hash === nextHash ? pendingHelpdesk : null;
+    const toSet = {};
+    const toRemove = [];
+    if (pending) {
+      toSet.helpdeskTeams = pending.teams;
+      if (pending.teamId != null) toSet.helpdeskTeamId = pending.teamId;
+      else toRemove.push("helpdeskTeamId");
+    } else {
+      toRemove.push("helpdeskTeams", "helpdeskTeamId");
+    }
+    if (toRemove.length) await browser.storage.local.remove(toRemove);
+    if (Object.keys(toSet).length) await browser.storage.local.set(toSet);
+    savedConnectionHash = nextHash;
+    fillTeamSelect(pending ? pending.teams : [], pending?.teamId ?? "");
+    helpdeskAvailable = !!pending && pending.teams.length > 0;
+    applyHelpdeskAvailability();
+  }
+  pendingHelpdesk = null;
 
   const result = await browser.runtime.sendMessage({
     action: "setup",

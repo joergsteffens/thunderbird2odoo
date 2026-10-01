@@ -330,3 +330,55 @@ test("Test connection with Helpdesk enables the team after saving", async () => 
   assert.deepEqual(page.storage.helpdeskTeams, TEAMS);
   assert.equal(page.el("helpdeskTeamId").disabled, false);
 });
+
+test("Test connection does not leak an unsaved connection's teams", async () => {
+  const page = openOptions(
+    { ...CONFIG, helpdeskTeams: TEAMS, helpdeskTeamId: 7 },
+    {
+      testConnection: () => ({ ok: true, info: {} }),
+      listHelpdeskTeams: () => ({
+        ok: true,
+        available: true,
+        teams: [{ id: 11, name: "Other" }],
+      }),
+      setup: () => ({ ok: true }),
+    },
+  );
+  await settle();
+  // Edit the connection but do not save it, then test it.
+  page.el("url").value = "https://other.example.com";
+  await page.el("url").dispatch("input");
+  await page.el("test").click();
+  await settle();
+  // The saved connection's cached teams and team stay untouched.
+  assert.deepEqual(page.storage.helpdeskTeams, TEAMS);
+  assert.equal(page.storage.helpdeskTeamId, 7);
+  // Saving that connection publishes its staged teams, without the old team.
+  await page.el("settings").dispatch("submit");
+  await settle();
+  assert.deepEqual(page.storage.helpdeskTeams, [{ id: 11, name: "Other" }]);
+  assert.ok(!("helpdeskTeamId" in page.storage));
+});
+
+test("Saving a connection change replaces the old connection's teams", async () => {
+  const page = openOptions(
+    { ...CONFIG, helpdeskTeams: TEAMS, helpdeskTeamId: 7 },
+    {
+      testConnection: () => ({ ok: true, info: {} }),
+      listHelpdeskTeams: () => ({ ok: true, available: false, teams: [] }),
+      setup: () => ({ ok: true }),
+    },
+  );
+  await settle();
+  page.el("url").value = "https://other.example.com";
+  await page.el("url").dispatch("input");
+  await page.el("test").click();
+  await settle();
+  // Still the old connection's teams while the new one is unsaved.
+  assert.deepEqual(page.storage.helpdeskTeams, TEAMS);
+  assert.equal(page.storage.helpdeskTeamId, 7);
+  await page.el("settings").dispatch("submit");
+  await settle();
+  assert.deepEqual(page.storage.helpdeskTeams, []);
+  assert.ok(!("helpdeskTeamId" in page.storage));
+});
