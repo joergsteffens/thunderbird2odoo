@@ -1,5 +1,5 @@
 // Runs displayScript.js (the status bar) in a fake DOM, with the Helpdesk
-// team list and the import defaults simulated in storage.
+// team list and the default team simulated in storage.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -56,58 +56,80 @@ function button(bar, label) {
   )[0];
 }
 
-async function clickAdd(bar) {
-  await button(bar, "Add").click();
+// The controls of the button row, in order: button labels, "select" for a
+// select.
+function controls(bar) {
+  return button(bar, "Verify").parentElement.children.map((el) =>
+    el.tagName === "SELECT" ? "select" : el.textContent,
+  );
+}
+
+async function clickButton(bar, label) {
+  await button(bar, label).click();
   await settle();
   return bar.sentMessages.find((m) => m.action === "addMessage");
 }
 
+const ADD_TICKET = "Add as Ticket (Helpdesk)";
+const ADD_LEAD = "Add as Opportunity (CRM Lead)";
+const ADD_GENERIC = "Add as Generic";
+
 test("without Helpdesk the status bar offers Opportunity and Generic", async () => {
   const bar = await loadStatusBar({});
-  const [importAs, ...rest] = selects(bar);
-  assert.deepEqual(optionValues(importAs), ["crm.lead", "generic"]);
-  assert.equal(importAs.value, "crm.lead");
-  assert.equal(rest.length, 0);
-  assert.deepEqual(await clickAdd(bar), {
+  assert.deepEqual(controls(bar), ["Verify", ADD_LEAD, ADD_GENERIC]);
+  assert.deepEqual(await clickButton(bar, ADD_LEAD), {
     action: "addMessage",
     choice: { model: "crm.lead" },
   });
 });
 
-test("a stored Ticket default shows Opportunity while Helpdesk is missing", async () => {
-  const bar = await loadStatusBar({ defaultImportAs: "helpdesk.ticket" });
-  assert.equal(selects(bar)[0].value, "crm.lead");
-});
-
-test("with one team Ticket is preselected and there is no team select", async () => {
-  const bar = await loadStatusBar({ helpdeskTeams: [TEAMS[0]] });
-  const [importAs, ...rest] = selects(bar);
-  assert.deepEqual(optionValues(importAs), [
-    "helpdesk.ticket",
-    "crm.lead",
-    "generic",
-  ]);
-  assert.equal(importAs.value, "helpdesk.ticket");
-  assert.equal(rest.length, 0);
-  assert.deepEqual((await clickAdd(bar)).choice, { model: "helpdesk.ticket" });
-});
-
-test("with several teams and no default team Odoo picks the team", async () => {
+test("Add as Generic sends Generic and warns in its tooltip", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS });
-  const [, team] = selects(bar);
+  assert.match(button(bar, ADD_GENERIC).title, /Odoo 19/);
+  assert.deepEqual((await clickButton(bar, ADD_GENERIC)).choice, {
+    model: "generic",
+  });
+});
+
+test("with one team there is Add as Ticket and no team select", async () => {
+  const bar = await loadStatusBar({ helpdeskTeams: [TEAMS[0]] });
+  assert.deepEqual(controls(bar), [
+    "Verify",
+    ADD_TICKET,
+    ADD_LEAD,
+    ADD_GENERIC,
+  ]);
+  assert.deepEqual((await clickButton(bar, ADD_TICKET)).choice, {
+    model: "helpdesk.ticket",
+  });
+});
+
+test("with several teams the team select follows Add as Ticket", async () => {
+  const bar = await loadStatusBar({ helpdeskTeams: TEAMS });
+  assert.deepEqual(controls(bar), [
+    "Verify",
+    ADD_TICKET,
+    "select",
+    ADD_LEAD,
+    ADD_GENERIC,
+  ]);
+  const [team] = selects(bar);
   assert.deepEqual(optionValues(team), ["", "3", "7", "9"]);
   assert.equal(team.options[0].textContent, "Default team");
   assert.equal(team.value, "");
-  assert.deepEqual((await clickAdd(bar)).choice, { model: "helpdesk.ticket" });
+  // No default team: Odoo picks the team.
+  assert.deepEqual((await clickButton(bar, ADD_TICKET)).choice, {
+    model: "helpdesk.ticket",
+  });
 });
 
 test("the configured default team is preselected", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS, helpdeskTeamId: 7 });
-  const [, team] = selects(bar);
+  const [team] = selects(bar);
   assert.deepEqual(optionValues(team), ["3", "7", "9"]);
   assert.equal(team.value, "7");
   assert.equal(team.options[1].textContent, "Sales & Support");
-  assert.deepEqual((await clickAdd(bar)).choice, {
+  assert.deepEqual((await clickButton(bar, ADD_TICKET)).choice, {
     model: "helpdesk.ticket",
     teamId: "7",
   });
@@ -115,52 +137,41 @@ test("the configured default team is preselected", async () => {
 
 test("a default team no longer in the list falls back to Default team", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS, helpdeskTeamId: 99 });
-  const [, team] = selects(bar);
+  const [team] = selects(bar);
   assert.equal(team.value, "");
-  assert.deepEqual((await clickAdd(bar)).choice, { model: "helpdesk.ticket" });
+  assert.deepEqual((await clickButton(bar, ADD_TICKET)).choice, {
+    model: "helpdesk.ticket",
+  });
 });
 
 test("the team picked by the user is sent", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS });
-  const [, team] = selects(bar);
+  const [team] = selects(bar);
   team.value = "9";
-  assert.deepEqual((await clickAdd(bar)).choice, {
+  assert.deepEqual((await clickButton(bar, ADD_TICKET)).choice, {
     model: "helpdesk.ticket",
     teamId: "9",
   });
 });
 
-test("the team select is hidden for Opportunity and Generic", async () => {
+test("the team is not sent with an Opportunity", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS, helpdeskTeamId: 7 });
-  const [importAs, team] = selects(bar);
-  assert.equal(team.style.display, "");
-  importAs.value = "crm.lead";
-  await importAs.dispatch("change");
-  assert.equal(team.style.display, "none");
-  // The hidden team is not sent with an Opportunity.
-  assert.deepEqual((await clickAdd(bar)).choice, { model: "crm.lead" });
-});
-
-test("a Generic default is preselected", async () => {
-  const bar = await loadStatusBar({
-    helpdeskTeams: TEAMS,
-    defaultImportAs: "generic",
+  assert.deepEqual((await clickButton(bar, ADD_LEAD)).choice, {
+    model: "crm.lead",
   });
-  assert.equal(selects(bar)[0].value, "generic");
 });
 
 test("loading teams in the options updates an open status bar", async () => {
   const bar = await loadStatusBar({});
-  assert.equal(selects(bar).length, 1);
+  assert.equal(button(bar, ADD_TICKET), undefined);
   await bar.browser.storage.local.set({ helpdeskTeams: TEAMS });
   await settle();
-  const [importAs, team] = selects(bar);
-  assert.equal(importAs.value, "helpdesk.ticket");
-  assert.ok(team);
+  assert.ok(button(bar, ADD_TICKET));
+  assert.equal(selects(bar).length, 1);
 });
 
 test("with a predecessor in Odoo, Add sends no choice", async () => {
   const bar = await loadStatusBar({ helpdeskTeams: TEAMS }, "parent_found");
-  assert.equal(selects(bar).length, 0);
-  assert.deepEqual(await clickAdd(bar), { action: "addMessage" });
+  assert.deepEqual(controls(bar), ["Verify", "Add"]);
+  assert.deepEqual(await clickButton(bar, "Add"), { action: "addMessage" });
 });

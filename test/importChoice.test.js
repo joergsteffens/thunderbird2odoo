@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import "../lib/importChoice.js";
 
 const {
-  getDefaultImportModel,
   getImportModelChoices,
   getModelLabel,
   getTeamChoices,
@@ -25,56 +24,28 @@ test("isHelpdeskAvailable is false without cached teams", () => {
   assert.equal(isHelpdeskAvailable({ helpdeskTeams: TEAMS }), true);
 });
 
-test("default model stays Opportunity for existing configs without Helpdesk", () => {
-  assert.equal(getDefaultImportModel({}), "crm.lead");
-  assert.equal(getDefaultImportModel(undefined), "crm.lead");
-});
-
-test("default model is Ticket once Helpdesk teams are loaded", () => {
-  assert.equal(
-    getDefaultImportModel({ helpdeskTeams: TEAMS }),
-    "helpdesk.ticket",
-  );
-});
-
-test("a stored Ticket default falls back to Opportunity without Helpdesk", () => {
-  assert.equal(
-    getDefaultImportModel({ defaultImportAs: "helpdesk.ticket" }),
-    "crm.lead",
-  );
-  assert.equal(
-    getDefaultImportModel({
-      defaultImportAs: "helpdesk.ticket",
-      helpdeskTeams: TEAMS,
-    }),
-    "helpdesk.ticket",
-  );
-});
-
-test("stored Opportunity and Generic defaults are honored", () => {
-  for (const m of ["crm.lead", "generic"]) {
-    assert.equal(getDefaultImportModel({ defaultImportAs: m }), m);
-    assert.equal(
-      getDefaultImportModel({ defaultImportAs: m, helpdeskTeams: TEAMS }),
-      m,
-    );
-  }
-});
-
-test("an unknown stored default is ignored", () => {
-  assert.equal(getDefaultImportModel({ defaultImportAs: "x.y" }), "crm.lead");
-});
-
-test("resolveImportModel prefers the explicit choice", () => {
-  const cfg = { defaultImportAs: "crm.lead", helpdeskTeams: TEAMS };
+test("resolveImportModel uses the explicit choice", () => {
+  const cfg = { helpdeskTeams: TEAMS };
   assert.equal(resolveImportModel({ model: "generic" }, cfg), "generic");
+  assert.equal(resolveImportModel({ model: "crm.lead" }, cfg), "crm.lead");
   assert.equal(
     resolveImportModel({ model: "helpdesk.ticket" }, cfg),
     "helpdesk.ticket",
   );
+});
+
+test("resolveImportModel falls back to Opportunity without a valid choice", () => {
+  const cfg = { helpdeskTeams: TEAMS };
   assert.equal(resolveImportModel({}, cfg), "crm.lead");
   assert.equal(resolveImportModel(undefined, cfg), "crm.lead");
   assert.equal(resolveImportModel({ model: "bogus" }, cfg), "crm.lead");
+});
+
+test("resolveImportModel never picks Ticket without Helpdesk", () => {
+  assert.equal(
+    resolveImportModel({ model: "helpdesk.ticket" }, {}),
+    "crm.lead",
+  );
 });
 
 test("resolveTeamId prefers the explicit team", () => {

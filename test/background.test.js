@@ -137,16 +137,6 @@ test("without Helpdesk the dialog offers Opportunity and Generic as before", asy
   assert.equal(uploads(fb).length, 0, "closing the dialog imports nothing");
 });
 
-test("a stored Ticket default does not add Ticket without Helpdesk", async () => {
-  const fb = await loadBackground({
-    ...CONFIG,
-    defaultImportAs: "helpdesk.ticket",
-    helpdeskTeams: [],
-  });
-  await importFromMenu(fb);
-  assert.ok(!importDialog(fb).buttons.some((b) => /Ticket/.test(b.title)));
-});
-
 test("with one team the dialog adds Ticket without a team select", async () => {
   const fb = await loadBackground({ ...CONFIG, helpdeskTeams: ONE_TEAM });
   await importFromMenu(fb);
@@ -340,6 +330,13 @@ test("Add passes the model and team chosen in the status bar, without the dialog
 test("Add with Opportunity from the status bar", async () => {
   const fb = await loadBackground({ ...CONFIG });
   await addFromStatusBar(fb, { model: "crm.lead" });
+  assert.equal(uploads(fb)[0].model, "crm.lead");
+});
+
+test("Add as Ticket without Helpdesk imports as Opportunity", async () => {
+  // A status bar rendered before the teams were removed can still send it.
+  const fb = await loadBackground({ ...CONFIG, helpdeskTeams: [] });
+  await addFromStatusBar(fb, { model: "helpdesk.ticket" });
   assert.equal(uploads(fb)[0].model, "crm.lead");
 });
 

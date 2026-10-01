@@ -22,7 +22,6 @@ const TEAMS = [
   { id: 7, name: "Technical" },
 ];
 const IMPORT_CONTROLS = [
-  "defaultImportAs",
   "helpdeskTeamId",
   "loadTeams",
   "rewriteDeliveredTo",
@@ -106,7 +105,6 @@ test("a saved team missing from the cached teams is kept on Save", async () => {
     ...CONFIG,
     helpdeskTeams: TEAMS,
     helpdeskTeamId: 99,
-    defaultImportAs: "crm.lead",
   });
   await settle();
   assert.deepEqual(teamOptions(page).at(-1), [
@@ -114,12 +112,12 @@ test("a saved team missing from the cached teams is kept on Save", async () => {
     "Team #99 (not in the loaded teams)",
   ]);
   assert.equal(page.el("helpdeskTeamId").value, "99");
-  // The user only changes the default import type.
-  page.el("defaultImportAs").value = "generic";
+  // The user only changes the Delivered-To setting.
+  page.el("rewriteDeliveredTo").checked = true;
   await page.el("saveTicket").click();
   await settle();
   assert.equal(page.storage.helpdeskTeamId, 99);
-  assert.equal(page.storage.defaultImportAs, "generic");
+  assert.equal(page.storage.rewriteDeliveredTo, true);
 });
 
 test("a saved team is kept when no teams were ever loaded", async () => {
@@ -131,21 +129,18 @@ test("a saved team is kept when no teams were ever loaded", async () => {
   assert.equal(page.storage.helpdeskTeamId, 5);
 });
 
-test("choosing 'not set' and Automatic removes the stored values", async () => {
+test("choosing 'not set' removes the stored team", async () => {
   const page = openOptions({
     ...CONFIG,
     helpdeskTeams: TEAMS,
     helpdeskTeamId: 3,
-    defaultImportAs: "helpdesk.ticket",
   });
   await settle();
   page.el("helpdeskTeamId").value = "";
-  page.el("defaultImportAs").value = "";
   page.el("rewriteDeliveredTo").checked = true;
   await page.el("saveTicket").click();
   await settle();
   assert.ok(!("helpdeskTeamId" in page.storage));
-  assert.ok(!("defaultImportAs" in page.storage));
   assert.equal(page.storage.rewriteDeliveredTo, true);
   assert.equal(page.el("ticketStatus").textContent, "Saved");
 });
@@ -220,50 +215,31 @@ test("Load teams re-enables the button when the background does not answer", asy
   assert.match(page.el("loadTeamsStatus").textContent, /^Failed: Could not/);
 });
 
-function ticketOption(page) {
-  return page
-    .el("defaultImportAs")
-    .options.find((o) => o.value === "helpdesk.ticket");
-}
-
-test("without Helpdesk teams Ticket and the team are greyed out", async () => {
+test("without Helpdesk teams the team is greyed out", async () => {
   const page = openOptions({ ...CONFIG, helpdeskTeamId: 5 });
   await settle();
-  assert.equal(ticketOption(page).disabled, true);
   assert.equal(page.el("helpdeskTeamId").disabled, true);
   assert.match(
     page.el("helpdeskNote").textContent,
     /^Helpdesk is not available/,
   );
   // The rest of Import Settings stays usable.
-  for (const id of [
-    "defaultImportAs",
-    "loadTeams",
-    "rewriteDeliveredTo",
-    "saveTicket",
-  ])
+  for (const id of ["loadTeams", "rewriteDeliveredTo", "saveTicket"])
     assert.equal(page.el(id).disabled, false, id);
-  // Opportunity and Generic can still be chosen.
-  const enabled = page
-    .el("defaultImportAs")
-    .options.filter((o) => !o.disabled)
-    .map((o) => o.value);
-  assert.deepEqual(enabled, ["", "crm.lead", "generic"]);
   // Saving keeps the (greyed out) saved team.
   await page.el("saveTicket").click();
   await settle();
   assert.equal(page.storage.helpdeskTeamId, 5);
 });
 
-test("with Helpdesk teams Ticket and the team can be selected", async () => {
+test("with Helpdesk teams the team can be selected", async () => {
   const page = openOptions({ ...CONFIG, helpdeskTeams: TEAMS });
   await settle();
-  assert.equal(ticketOption(page).disabled, false);
   assert.equal(page.el("helpdeskTeamId").disabled, false);
   assert.equal(page.el("helpdeskNote").textContent, "");
 });
 
-test("Load teams: Helpdesk not installed greys out the Ticket options", async () => {
+test("Load teams: Helpdesk not installed greys out the team", async () => {
   const page = openOptions(
     { ...CONFIG, helpdeskTeams: TEAMS },
     {
@@ -278,11 +254,10 @@ test("Load teams: Helpdesk not installed greys out the Ticket options", async ()
     "Helpdesk is not installed in Odoo",
   );
   assert.deepEqual(page.storage.helpdeskTeams, []);
-  assert.equal(ticketOption(page).disabled, true);
   assert.equal(page.el("helpdeskTeamId").disabled, true);
 });
 
-test("Load teams: finding teams enables the Ticket options", async () => {
+test("Load teams: finding teams enables the team", async () => {
   const page = openOptions(
     { ...CONFIG },
     {
@@ -290,10 +265,9 @@ test("Load teams: finding teams enables the Ticket options", async () => {
     },
   );
   await settle();
-  assert.equal(ticketOption(page).disabled, true);
+  assert.equal(page.el("helpdeskTeamId").disabled, true);
   await page.el("loadTeams").click();
   await settle();
-  assert.equal(ticketOption(page).disabled, false);
   assert.equal(page.el("helpdeskTeamId").disabled, false);
   assert.equal(page.el("helpdeskNote").textContent, "");
 });
@@ -326,7 +300,7 @@ test("Test connection also checks Helpdesk, with the settings being tested", asy
   );
   // Not saved yet: Import Settings stay disabled.
   assert.equal(page.el("loadTeams").disabled, true);
-  assert.equal(ticketOption(page).disabled, true);
+  assert.equal(page.el("helpdeskTeamId").disabled, true);
 
   // Saving does not check again.
   await page.el("settings").dispatch("submit");
@@ -337,10 +311,10 @@ test("Test connection also checks Helpdesk, with the settings being tested", asy
     ["testConnection", "listHelpdeskTeams", "setup"],
   );
   assert.equal(page.el("loadTeams").disabled, false);
-  assert.equal(ticketOption(page).disabled, true);
+  assert.equal(page.el("helpdeskTeamId").disabled, true);
 });
 
-test("Test connection with Helpdesk enables the Ticket options after saving", async () => {
+test("Test connection with Helpdesk enables the team after saving", async () => {
   const page = openOptions(
     {},
     {
@@ -354,6 +328,5 @@ test("Test connection with Helpdesk enables the Ticket options after saving", as
   await page.el("settings").dispatch("submit");
   await settle();
   assert.deepEqual(page.storage.helpdeskTeams, TEAMS);
-  assert.equal(ticketOption(page).disabled, false);
   assert.equal(page.el("helpdeskTeamId").disabled, false);
 });

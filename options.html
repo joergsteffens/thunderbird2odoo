@@ -174,31 +174,15 @@
 
         <form id="ticketSettings">
           <label>
-            Default Import Type:<br />
-            <select id="defaultImportAs" disabled>
-              <option value="">
-                Automatic (Ticket if Helpdesk is available, else Opportunity)
-              </option>
-              <option value="helpdesk.ticket">Ticket (Helpdesk)</option>
-              <option value="crm.lead">Opportunity (CRM Lead)</option>
-              <option value="generic">Generic</option>
-            </select>
-          </label>
-          <p class="info">
-            Preselected type in the status bar's "Import as" control when a new
-            email has no match in Odoo. Ticket can only be selected once
-            Helpdesk teams have been loaded from Odoo; otherwise Opportunity is
-            used.
-          </p>
-          <label>
             Default Helpdesk Team:<br />
             <select id="helpdeskTeamId" disabled>
               <option value="">— not set —</option>
             </select>
           </label>
           <p class="info">
-            Used when importing an email as a Ticket without picking a team.
-            Leave "not set" to let Odoo choose its default team.
+            Team preselected when importing an email as a Ticket (import dialog
+            and status bar). Leave "not set" to let Odoo choose its default
+            team.
           </p>
           <p class="info">
             "Load teams from Odoo" reads the Helpdesk teams and caches them.

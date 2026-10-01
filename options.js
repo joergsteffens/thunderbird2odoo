@@ -1,4 +1,4 @@
-const { toTeamId, MODEL_TICKET } = globalThis.OdooImportChoice;
+const { toTeamId } = globalThis.OdooImportChoice;
 
 const urlInput = document.getElementById("url");
 const dbInput = document.getElementById("db");
@@ -17,7 +17,6 @@ const countBtn = document.getElementById("countBtn");
 const countResult = document.getElementById("countResult");
 const cacheInfo = document.getElementById("cacheInfo");
 
-const defaultImportAsInput = document.getElementById("defaultImportAs");
 const helpdeskTeamIdInput = document.getElementById("helpdeskTeamId");
 const loadTeamsBtn = document.getElementById("loadTeams");
 const loadTeamsStatus = document.getElementById("loadTeamsStatus");
@@ -35,7 +34,6 @@ const syncFields = [
   syncNowBtn,
   countBtn,
   syncSettingsForm,
-  defaultImportAsInput,
   helpdeskTeamIdInput,
   loadTeamsBtn,
   rewriteDeliveredToInput,
@@ -55,9 +53,6 @@ function setSyncEnabled(enabled) {
 }
 
 function applyHelpdeskAvailability() {
-  for (const opt of defaultImportAsInput.options) {
-    if (opt.value === MODEL_TICKET) opt.disabled = !helpdeskAvailable;
-  }
   helpdeskTeamIdInput.disabled = !syncEnabled || !helpdeskAvailable;
   helpdeskNote.textContent = helpdeskAvailable
     ? ""
@@ -96,7 +91,6 @@ function invalidate() {
     "syncLimit",
     "helpdeskTeamId",
     "helpdeskTeams",
-    "defaultImportAs",
     "rewriteDeliveredTo",
   ]);
   if (stored.url) urlInput.value = stored.url;
@@ -104,8 +98,6 @@ function invalidate() {
   if (stored.apikey) apiKeyInput.value = stored.apikey;
   if (stored.maxAgeDays !== undefined) maxAgeInput.value = stored.maxAgeDays;
   if (stored.syncLimit !== undefined) syncLimitInput.value = stored.syncLimit;
-  if (stored.defaultImportAs)
-    defaultImportAsInput.value = stored.defaultImportAs;
   rewriteDeliveredToInput.checked = stored.rewriteDeliveredTo === true;
   // Show the cached teams (and the saved team) right away, so saving before
   // the teams are (re)loaded from Odoo keeps the saved team.
@@ -232,7 +224,7 @@ async function loadTeams(config) {
     fillTeamSelect(result.teams, wanted);
     // Cached so the import dialog and the status bar "Add" control can
     // offer the teams without calling Odoo on every click. An empty list
-    // (Helpdesk not installed) disables the Ticket options. Only write when
+    // (Helpdesk not installed) disables the Ticket import. Only write when
     // the list changed, so a repeated "Test connection" does not churn
     // storage.onChanged (which re-renders the status bar).
     const stored = await browser.storage.local.get("helpdeskTeams");
@@ -262,13 +254,10 @@ loadTeamsBtn.addEventListener("click", () => loadTeams());
 saveTicketBtn.addEventListener("click", async () => {
   try {
     const teamId = toTeamId(helpdeskTeamIdInput.value);
-    const importAs = defaultImportAsInput.value;
     const toRemove = [];
     const toSet = { rewriteDeliveredTo: rewriteDeliveredToInput.checked };
     if (teamId === null) toRemove.push("helpdeskTeamId");
     else toSet.helpdeskTeamId = teamId;
-    if (importAs === "") toRemove.push("defaultImportAs");
-    else toSet.defaultImportAs = importAs;
     if (toRemove.length) await browser.storage.local.remove(toRemove);
     await browser.storage.local.set(toSet);
     ticketStatus.textContent = "Saved";

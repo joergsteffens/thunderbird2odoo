@@ -28,7 +28,7 @@ This Thunderbird add-on imports emails into the ERP software [Odoo](https://www.
 
 The add-on never contacts the Odoo server automatically. Server requests are only made when explicitly triggered by the user:
 
-- clicking **Verify** or **Add** in the status bar
+- clicking **Verify**, **Add** or an **Add as …** button in the status bar
 - selecting **Verify** or **Import this email** from the right-click menu
 - selecting **Sync from Odoo** from the right-click menu
 - clicking a button on the options page (e.g. **Test connection**, **Load teams from Odoo**, **Sync**)
@@ -66,7 +66,11 @@ keeping performance impact minimal for non-Odoo emails.
 
 Buttons in the bar:
 - **Verify** — re-check this email against Odoo
-- **Add** — import the email into Odoo
+- **Add** — shown when a predecessor is in Odoo: import the email into its record
+- **Add as Ticket (Helpdesk)**, **Add as Opportunity (CRM Lead)**, **Add as Generic** — shown when
+  neither the email nor a predecessor is in Odoo: import it as that type with one click. *Ticket*
+  only appears when Helpdesk is available; with several teams a team select follows it, preselected
+  with the *Default Helpdesk Team*.
 
 Results are cached per message and persist across restarts.
 
@@ -77,9 +81,8 @@ The options page has three sections:
 **Odoo Connection** — URL, API key, database, test connection, save.
 
 **Import Settings** — Settings for new emails without a match in Odoo:
-- **Default Import Type** — preselected in the status bar's *Import as* control. *Automatic* (default) uses Ticket when Helpdesk is available, otherwise Opportunity.
-- **Default Helpdesk Team** — preselected team for tickets. *Not set* lets Odoo choose.
-- **Load teams from Odoo** — checks whether Helpdesk is installed and caches its teams. *Test connection* does the same. Without Helpdesk, *Ticket* and the Helpdesk team are shown greyed out. Click it again after changing the teams in Odoo.
+- **Default Helpdesk Team** — preselected team for tickets in the import dialog and the status bar. *Not set* lets Odoo choose.
+- **Load teams from Odoo** — checks whether Helpdesk is installed and caches its teams. *Test connection* does the same. Without Helpdesk, the Helpdesk team is shown greyed out and *Ticket* is not offered for import. Click it again after changing the teams in Odoo.
 - **Replace `Delivered-To` with `X-Original-To`** — off by default. Enable it when Odoo adds an internal mailbox as a follower: Odoo reads the recipients from `Delivered-To` first, which after local delivery can hold that mailbox.
 
 **Odoo Sync** — Settings for bulk sync:

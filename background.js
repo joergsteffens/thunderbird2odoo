@@ -221,7 +221,6 @@ browser.storage.onChanged.addListener((changes, area) => {
       "apikey",
       "helpdeskTeamId",
       "helpdeskTeams",
-      "defaultImportAs",
       "rewriteDeliveredTo",
     ].some((k) => k in changes)
   )
@@ -236,7 +235,6 @@ async function get_config() {
     "apikey",
     "helpdeskTeamId",
     "helpdeskTeams",
-    "defaultImportAs",
     "rewriteDeliveredTo",
   ]);
   return _cachedConfig;
@@ -449,16 +447,11 @@ async function openDialog(title, message, buttons = [], selects = []) {
  * @returns {Promise<{model:string, teamId?:string}|null>} null if closed
  */
 async function askImportChoice(cfg) {
-  const buttons = getImportModelChoices(cfg).map((c) => {
-    const button = {
-      title: c.value === MODEL_GENERIC ? c.label : "As " + c.label,
-      value: c.value,
-    };
-    if (c.value === MODEL_GENERIC)
-      button.tooltip =
-        "Might fail on Odoo 19 without Lost Messages module, see https://github.com/joergsteffens/thunderbird2odoo";
-    return button;
-  });
+  const buttons = getImportModelChoices(cfg).map((c) => ({
+    title: c.value === MODEL_GENERIC ? c.label : "As " + c.label,
+    value: c.value,
+    tooltip: c.tooltip,
+  }));
   const selects = [];
   const teams = getTeamChoices(cfg);
   if (teams) {
@@ -527,7 +520,7 @@ async function importMessageById(tbMessageId, choice = null) {
   }
 
   // Step 3: No predecessor found. The status bar sends the model (and
-  // team) picked in its "Import as" control; otherwise ask in a dialog.
+  // team) of the "Add as ..." button clicked; otherwise ask in a dialog.
   await cacheNotFoundResult(mid);
 
   if (!choice?.model) choice = await askImportChoice(cfg);
