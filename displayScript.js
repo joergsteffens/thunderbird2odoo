@@ -67,7 +67,7 @@ function renderBar(d, container) {
   var l = document.createElement("span");
 
   var btnRow = document.createElement("div");
-  btnRow.style.cssText = "width:100%;display:flex;gap:6px";
+  btnRow.style.cssText = "width:100%;display:flex;gap:6px;flex-wrap:wrap";
 
   function appendStatusElement(l, status) {
     var e = document.createElement("span");
