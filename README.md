@@ -8,6 +8,7 @@ This Thunderbird add-on imports emails into the ERP software [Odoo](https://www.
 
 * Odoo >= 19 (the [External JSON-2 API](https://www.odoo.com/documentation/19.0/developer/reference/external_api.html) was introduced in Odoo 19)
 * Optional:
+  * Odoo *Helpdesk* (`helpdesk` module) to import emails as *Ticket (Helpdesk)*. Without it, the Ticket option is not offered.
   * [mail_manual_routing](https://apps.odoo.com/apps/modules/19.0/mail_manual_routing) to handle new and unrelated emails that are otherwise not visible in Odoo. For details, see [faotools mail_manual_routing](https://faotools.com/apps/19.0/lost-messages-routing-19-0-mail-manual-routing-1037).
     * Without this extension, emails imported as *Generic* may not be visible.
 
@@ -23,6 +24,7 @@ This Thunderbird add-on imports emails into the ERP software [Odoo](https://www.
     * Set **Database** if required (normally not).
     * ![Odoo Email Connector: options window](images/OdooEmailConnector-configure.png)
   * Click *Test connection* — you will be prompted to grant host permission. If successful, click *Save*.
+  * Optional, to import emails as tickets: in **Import Settings** click *Load teams from Odoo* once (this also checks that Helpdesk is installed), then optionally pick a **Default Helpdesk Team**. Without a default team, Odoo chooses the team. Click the button again after changing the teams in Odoo.
 
 ## Usage
 
