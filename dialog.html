@@ -24,6 +24,17 @@
         word-break: break-all;
         overflow-y: auto;
       }
+      #selects label {
+        display: block;
+        margin-bottom: 0.8rem;
+      }
+      #selects select {
+        display: block;
+        width: 100%;
+        margin-top: 0.3rem;
+        padding: 0.3rem;
+        box-sizing: border-box;
+      }
       #buttons {
         display: flex;
         gap: 0.5rem;
@@ -38,6 +49,7 @@
   </head>
   <body>
     <p id="message"></p>
+    <div id="selects"></div>
     <div id="buttons"></div>
     <script src="lib/domUtils.js"></script>
     <script src="dialog.js"></script>

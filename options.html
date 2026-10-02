@@ -73,7 +73,8 @@
       }
       input[type="text"],
       input[type="password"],
-      input[type="number"] {
+      input[type="number"],
+      select {
         width: 100%;
         padding: 0.3rem;
         box-sizing: border-box;
@@ -134,97 +135,171 @@
 
     <div class="main">
       <div class="forms">
+        <h2>Odoo Connection</h2>
 
-    <h2>Odoo Connection</h2>
+        <form id="settings">
+          <label>
+            Odoo URL:<br />
+            <input
+              id="url"
+              type="text"
+              placeholder="https://my.odoo.com"
+            /> </label
+          ><br /><br />
 
-    <form id="settings">
-      <label>
-        Odoo URL:<br />
-        <input id="url" type="text" placeholder="https://my.odoo.com" /> </label
-      ><br /><br />
+          <label>
+            API Key:<br />
+            <input id="apikey" type="password" /> </label
+          ><br /><br />
 
-      <label>
-        API Key:<br />
-        <input id="apikey" type="password" /> </label
-      ><br /><br />
+          <label>
+            Database (optional):<br />
+            <input id="db" type="text" /> </label
+          ><br /><br />
 
-      <label>
-        Database (optional):<br />
-        <input id="db" type="text" /> </label
-      ><br /><br />
+          <button id="test" type="button">Test connection</button>
+          <span
+            id="testStatus"
+            role="status"
+            aria-live="polite"
+            style="margin-left: 0.5rem; font-size: 0.9em"
+          ></span>
+          <br /><br />
+          <button id="save" type="submit" disabled>Save</button>
+        </form>
 
-      <button id="test" type="button">Test connection</button>
-      <span
-        id="testStatus"
-        role="status"
-        aria-live="polite"
-        style="margin-left: 0.5rem; font-size: 0.9em"
-      ></span>
-      <br /><br />
-      <button id="save" type="submit" disabled>Save</button>
-    </form>
+        <hr />
 
-    <hr />
+        <h3>Import Settings</h3>
 
-    <h3>Odoo Sync</h3>
+        <form id="ticketSettings">
+          <label>
+            Default Helpdesk Team:<br />
+            <select id="helpdeskTeamId" disabled>
+              <option value="">— not set —</option>
+            </select>
+          </label>
+          <p class="info">
+            Team preselected when importing an email as a Ticket (import dialog
+            and status bar). Leave "not set" to let Odoo choose its default
+            team.
+          </p>
+          <p class="info">
+            "Load teams from Odoo" reads the Helpdesk teams and caches them.
+            "Test connection" does the same. Click it again after changing the
+            teams in Odoo.
+          </p>
+          <p id="helpdeskNote" class="info"></p>
+          <button id="loadTeams" type="button" disabled>
+            Load teams from Odoo
+          </button>
+          <span
+            id="loadTeamsStatus"
+            role="status"
+            aria-live="polite"
+            style="margin-left: 0.5rem; font-size: 0.9em"
+          ></span>
+          <br /><br />
+          <label>
+            <input id="rewriteDeliveredTo" type="checkbox" disabled />
+            Replace <code>Delivered-To</code> with <code>X-Original-To</code>
+            before upload
+          </label>
+          <p class="info">
+            Odoo reads the recipients from <code>Delivered-To</code> first.
+            After local delivery this header can hold an internal mailbox, which
+            Odoo then adds as a follower. When enabled,
+            <code>Delivered-To</code> is replaced with
+            <code>X-Original-To</code>, or removed if that header is missing.
+          </p>
+          <button id="saveTicket" type="button" disabled>Save</button>
+          <span
+            id="ticketStatus"
+            role="status"
+            aria-live="polite"
+            style="margin-left: 0.5rem; font-size: 0.9em"
+          ></span>
+        </form>
 
-    <form id="syncSettings">
-      <label>
-        Max age (days, 0 = unlimited):<br />
-        <input id="maxAgeDays" type="number" min="0" value="365" />
-      </label>
-      <br /><br />
-      <label>
-        Sync limit (0 = unlimited):<br />
-        <input id="syncLimit" type="number" min="0" value="10000" />
-      </label>
-      <br /><br />
-      <button id="saveSync" type="button">Save</button>
-      <button id="countBtn" type="button">Count</button>
-      <span
-        id="countResult"
-        role="status"
-        aria-live="polite"
-        style="margin-left: 0.5rem; font-size: 0.9em"
-      ></span>
-    </form>
+        <hr />
 
-    <br />
-    <button id="clearCache" type="button" style="margin-right: 0.5rem">
-      Clear Cache
-    </button>
-    <button id="syncNow" type="button">Sync</button>
+        <h3>Odoo Sync</h3>
 
-    <p class="info" id="cacheInfo"></p>
+        <form id="syncSettings">
+          <label>
+            Max age (days, 0 = unlimited):<br />
+            <input id="maxAgeDays" type="number" min="0" value="365" />
+          </label>
+          <br /><br />
+          <label>
+            Sync limit (0 = unlimited):<br />
+            <input id="syncLimit" type="number" min="0" value="10000" />
+          </label>
+          <br /><br />
+          <button id="saveSync" type="button">Save</button>
+          <button id="countBtn" type="button">Count</button>
+          <span
+            id="countResult"
+            role="status"
+            aria-live="polite"
+            style="margin-left: 0.5rem; font-size: 0.9em"
+          ></span>
+        </form>
 
-    <p id="status"></p>
+        <br />
+        <button id="clearCache" type="button" style="margin-right: 0.5rem">
+          Clear Cache
+        </button>
+        <button id="syncNow" type="button">Sync</button>
 
+        <p class="info" id="cacheInfo"></p>
+
+        <p id="status"></p>
       </div>
       <div class="sidebar">
+        <div class="usage">
+          <strong>How it works</strong>
+          <ul>
+            <li>
+              <em>Status bar</em> &mdash; when viewing an email, shows whether
+              it is known in Odoo (cache only, no server request). Only appears
+              if the email has cached data; otherwise hidden.
+            </li>
+            <li>
+              <em>Verify</em> &mdash; checks if the email exists on the Odoo
+              server
+            </li>
+            <li><em>Add / Import</em> &mdash; uploads the email to Odoo</li>
+            <li>
+              <em>Sync from Odoo</em> &mdash; batch-caches message IDs for
+              instant status display
+            </li>
+          </ul>
+        </div>
 
-    <div class="usage">
-      <strong>How it works</strong>
-      <ul>
-        <li><em>Status bar</em> &mdash; when viewing an email, shows whether it is known in Odoo (cache only, no server request). Only appears if the email has cached data; otherwise hidden.</li>
-        <li><em>Verify</em> &mdash; checks if the email exists on the Odoo server</li>
-        <li><em>Add / Import</em> &mdash; uploads the email to Odoo</li>
-        <li><em>Sync from Odoo</em> &mdash; batch-caches message IDs for instant status display</li>
-      </ul>
-    </div>
-
-    <div class="notice">
-      <strong>Data exchanged with your Odoo server:</strong>
-      No data is sent automatically &mdash; only when you click a button.
-      <ul>
-        <li>Verify: queries the server with the email's <em>Message-ID</em>, <em>In-Reply-To ID</em> and <em>Reference IDs</em> headers</li>
-        <li>Add / Import: uploads the complete email including headers, body, and attachments</li>
-        <li>Sync: downloads email metadata (<em>Message-ID</em>, <em>Odoo model name</em>, <em>record ID</em>, <em>Odoo message ID</em>) &mdash; no email content transferred</li>
-      </ul>
-    </div>
-
+        <div class="notice">
+          <strong>Data exchanged with your Odoo server:</strong>
+          No data is sent automatically &mdash; only when you click a button.
+          <ul>
+            <li>
+              Verify: queries the server with the email's <em>Message-ID</em>,
+              <em>In-Reply-To ID</em> and <em>Reference IDs</em> headers
+            </li>
+            <li>
+              Add / Import: uploads the complete email including headers, body,
+              and attachments
+            </li>
+            <li>
+              Sync: downloads email metadata (<em>Message-ID</em>,
+              <em>Odoo model name</em>, <em>record ID</em>,
+              <em>Odoo message ID</em>) &mdash; no email content transferred
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
 
+    <script src="lib/importChoice.js"></script>
     <script type="module" src="options.js"></script>
   </body>
 </html>

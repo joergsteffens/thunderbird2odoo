@@ -2,6 +2,39 @@ var _lastAction = null;
 var _ignoreNextCacheChange = false;
 var _pendingAction = false;
 var _container = null;
+var _cachedTeams = [];
+var _cachedDefaultTeamId = null;
+
+// Status dot colors.
+var COLOR_FOUND = "#1b8a1b";
+var COLOR_PARENT_FOUND = "#d49a00";
+var COLOR_NOT_FOUND = "#c0392b";
+
+// Config shape expected by lib/importChoice.js, which is injected before this
+// script and provides OdooImportChoice on the global scope.
+function getImportChoiceConfig() {
+  return {
+    helpdeskTeams: _cachedTeams,
+    helpdeskTeamId: _cachedDefaultTeamId,
+  };
+}
+
+function refreshImportChoiceCache() {
+  return messenger.storage.local
+    .get(["helpdeskTeams", "helpdeskTeamId"])
+    .then(function (stored) {
+      _cachedTeams = Array.isArray(stored.helpdeskTeams)
+        ? stored.helpdeskTeams
+        : [];
+      _cachedDefaultTeamId =
+        stored.helpdeskTeamId !== undefined ? stored.helpdeskTeamId : null;
+    })
+    .catch(function (err) {
+      console.debug("refreshImportChoiceCache failed:", err);
+      _cachedTeams = [];
+      _cachedDefaultTeamId = null;
+    });
+}
 
 function getContainer() {
   if (!_container) {
@@ -39,19 +72,19 @@ function renderBar(d, container) {
   var l = document.createElement("span");
 
   var btnRow = document.createElement("div");
-  btnRow.style.cssText = "width:100%;display:flex;gap:6px";
+  btnRow.style.cssText = "width:100%;display:flex;gap:6px;flex-wrap:wrap";
 
   function appendStatusElement(l, status) {
     var e = document.createElement("span");
     if (status === "found") {
       e.textContent = " \u25CF";
-      e.style.color = "#1b8a1b";
+      e.style.color = COLOR_FOUND;
     } else if (status === "parent_found") {
       e.textContent = " \u25CF";
-      e.style.color = "#d49a00";
+      e.style.color = COLOR_PARENT_FOUND;
     } else if (status === "not_found") {
       e.textContent = " \u2715";
-      e.style.color = "#c0392b";
+      e.style.color = COLOR_NOT_FOUND;
     } else {
       return;
     }
@@ -132,7 +165,7 @@ function renderBar(d, container) {
       btnStyle,
     ),
   );
-  if (d.status === "parent_found" || d.status === "not_found") {
+  if (d.status === "parent_found") {
     btnRow.appendChild(
       createButton(
         "Add",
@@ -143,6 +176,48 @@ function renderBar(d, container) {
         btnStyle,
       ),
     );
+  } else if (d.status === "not_found") {
+    // No predecessor either: one "Add as ..." button per import type, so the
+    // destination is picked right here instead of in a popup dialog.
+    // lib/importChoice.js supplies the types (Ticket only with Helpdesk) and,
+    // with several teams, the team choices shown next to "Add as Ticket".
+    var importChoiceCfg = getImportChoiceConfig();
+    var teamChoices = OdooImportChoice.getTeamChoices(importChoiceCfg);
+    var teamSelect = null;
+
+    OdooImportChoice.getImportModelChoices(importChoiceCfg).forEach(
+      function (c) {
+        var isTicket = c.value === OdooImportChoice.MODEL_TICKET;
+        btnRow.appendChild(
+          createButton(
+            "Add as " + c.label,
+            function () {
+              var choice = { model: c.value };
+              if (isTicket && teamSelect && teamSelect.value) {
+                choice.teamId = teamSelect.value;
+              }
+              doAction("addMessage", choice);
+            },
+            c.tooltip,
+            btnStyle,
+          ),
+        );
+        if (isTicket && teamChoices) {
+          teamSelect = document.createElement("select");
+          teamSelect.title = "Helpdesk team for the ticket";
+          teamSelect.style.cssText =
+            "font:caption;padding:2px 4px;border:1px solid ButtonBorder;border-radius:3px";
+          teamChoices.options.forEach(function (o) {
+            var opt = document.createElement("option");
+            opt.value = o.value;
+            opt.textContent = o.label;
+            teamSelect.appendChild(opt);
+          });
+          teamSelect.value = teamChoices.selected;
+          btnRow.appendChild(teamSelect);
+        }
+      },
+    );
   }
 
   b.appendChild(l);
@@ -151,11 +226,13 @@ function renderBar(d, container) {
   return b;
 }
 
-function doAction(action) {
+function doAction(action, choice) {
   if (_pendingAction) return;
   _pendingAction = true;
+  var payload = { action: action };
+  if (choice) payload.choice = choice;
   messenger.runtime
-    .sendMessage({ action: action })
+    .sendMessage(payload)
     .then(
       function (r) {
         _pendingAction = false;
@@ -209,13 +286,22 @@ messenger.runtime.onMessage.addListener(function (msg) {
 });
 
 messenger.storage.onChanged.addListener(function (changes, area) {
-  if (area === "local" && changes.odooMailCache) {
-    if (_ignoreNextCacheChange) {
-      _ignoreNextCacheChange = false;
-      return;
+  if (area === "local") {
+    if (changes.odooMailCache) {
+      if (_ignoreNextCacheChange) {
+        _ignoreNextCacheChange = false;
+        return;
+      }
+      refreshBar();
     }
-    refreshBar();
+    if (
+      ["helpdeskTeams", "helpdeskTeamId"].some(function (k) {
+        return k in changes;
+      })
+    ) {
+      refreshImportChoiceCache().then(refreshBar);
+    }
   }
 });
 
-refreshBar();
+refreshImportChoiceCache().then(refreshBar);

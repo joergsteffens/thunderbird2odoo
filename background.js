@@ -12,8 +12,14 @@ import {
   searchMailMessages,
   countMailMessages,
   unifyMessageId,
+  listHelpdeskTeams,
+  isModelInstalled,
 } from "./lib/odooClient.js";
-import { uploadMail, decodeRawMail } from "./lib/odooMailUpload.js";
+import {
+  uploadMail,
+  decodeRawMail,
+  rewriteDeliveredTo,
+} from "./lib/odooMailUpload.js";
 import {
   getCachedResult,
   setCachedResult,
@@ -24,6 +30,21 @@ import {
   setLastSync,
   CACHE_KEY,
 } from "./lib/mailCache.js";
+import { findPredecessor as findPredecessorIn } from "./lib/predecessor.js";
+// lib/importChoice.js is a plain script (shared with the message display
+// scripts), so it publishes its API on globalThis instead of exporting it.
+import "./lib/importChoice.js";
+
+const {
+  MODEL_TICKET,
+  MODEL_LEAD,
+  MODEL_GENERIC,
+  getTeamChoices,
+  getImportModelChoices,
+  getModelLabel,
+  resolveImportModel,
+  resolveTeamId,
+} = globalThis.OdooImportChoice;
 
 const MENU_ID_CONNECTOR = "odoo-connector";
 const MENU_ID_IMPORT = "odoo-import";
@@ -122,18 +143,13 @@ function getUrl(entry) {
   return null;
 }
 
-async function findPredecessor(cfg, pids) {
-  for (const pid of pids) {
-    const cached = await getCachedResult(pid);
-    if (cached?.status === "found") {
-      return { messageId: pid, entry: cached };
-    }
-    const found = await findAndCache(cfg, pid);
-    if (found.status === "found") {
-      return { messageId: pid, entry: found };
-    }
-  }
-  return null;
+function findPredecessor(cfg, pids) {
+  return findPredecessorIn(cfg, pids, {
+    findMails,
+    getCachedResult,
+    cacheFoundResult,
+    cacheNotFoundResult,
+  });
 }
 
 function notify(title, message, sticky = false) {
@@ -197,13 +213,30 @@ async function showResult(prefix, r, cfg, sticky = false) {
 let _cachedConfig = null;
 
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && ["url", "db", "apikey"].some((k) => k in changes))
+  if (
+    area === "local" &&
+    [
+      "url",
+      "db",
+      "apikey",
+      "helpdeskTeamId",
+      "helpdeskTeams",
+      "rewriteDeliveredTo",
+    ].some((k) => k in changes)
+  )
     _cachedConfig = null;
 });
 
 async function get_config() {
   if (_cachedConfig) return _cachedConfig;
-  _cachedConfig = await browser.storage.local.get(["url", "db", "apikey"]);
+  _cachedConfig = await browser.storage.local.get([
+    "url",
+    "db",
+    "apikey",
+    "helpdeskTeamId",
+    "helpdeskTeams",
+    "rewriteDeliveredTo",
+  ]);
   return _cachedConfig;
 }
 
@@ -355,17 +388,31 @@ async function getHeaders(messageId) {
 }
 
 async function showDialog(title, message, buttons = []) {
+  return (await openDialog(title, message, buttons)).choice;
+}
+
+/**
+ * Opens dialog.html and waits for a button click.
+ *
+ * @param {Array<{title:string,value:*,tooltip?:string}>} buttons
+ * @param {Array<{id:string,label:string,options:Array<{value:string,label:string}>,selected?:string}>} selects
+ *   optional <select> fields shown above the buttons
+ * @returns {Promise<{choice:*, values:Object<string,string>}>} the clicked
+ *   button's value (-1 if the window was closed) and the select values
+ */
+async function openDialog(title, message, buttons = [], selects = []) {
   const params = new URLSearchParams({
     title,
     message,
     buttons: JSON.stringify(buttons),
   });
+  if (selects.length) params.set("selects", JSON.stringify(selects));
   const url = browser.runtime.getURL("dialog.html?" + params);
   const win = await browser.windows.create({
     url: url,
     type: "popup",
     width: 600,
-    height: 360,
+    height: 360 + selects.length * 70,
   });
   let done = false;
   return new Promise((resolve) => {
@@ -378,13 +425,13 @@ async function showDialog(title, message, buttons = []) {
     const msgListener = (msg) => {
       if (msg.action === "dialogChoice" && msg.windowId === win.id) {
         cleanup();
-        resolve(msg.choice);
+        resolve({ choice: msg.choice, values: msg.values || {} });
       }
     };
     const closeListener = (windowId) => {
       if (windowId === win.id) {
         cleanup();
-        resolve(-1);
+        resolve({ choice: -1, values: {} });
       }
     };
     browser.runtime.onMessage.addListener(msgListener);
@@ -392,7 +439,41 @@ async function showDialog(title, message, buttons = []) {
   });
 }
 
-async function importMessageById(tbMessageId) {
+/**
+ * Asks how to import an email that is not in Odoo and has no predecessor
+ * there. Offers Opportunity and Generic as before; Ticket (and, with several
+ * teams, a team select) only once Helpdesk teams were loaded.
+ *
+ * @returns {Promise<{model:string, teamId?:string}|null>} null if closed
+ */
+async function askImportChoice(cfg) {
+  const buttons = getImportModelChoices(cfg).map((c) => ({
+    title: c.label,
+    value: c.value,
+    tooltip: c.tooltip,
+  }));
+  const selects = [];
+  const teams = getTeamChoices(cfg);
+  if (teams) {
+    selects.push({
+      id: "team",
+      label: "Helpdesk team (for tickets)",
+      ...teams,
+    });
+  }
+  const { choice, values } = await openDialog(
+    "Odoo Email Connector",
+    "This email and its predecessor are not in Odoo. How do you want to import it?",
+    buttons,
+    selects,
+  );
+  if (![MODEL_TICKET, MODEL_LEAD, MODEL_GENERIC].includes(choice)) return null;
+  const result = { model: choice };
+  if (choice === MODEL_TICKET && values.team) result.teamId = values.team;
+  return result;
+}
+
+async function importMessageById(tbMessageId, choice = null) {
   const hasPermission = await browser.permissions.contains({
     origins: ["*://*/*"],
   });
@@ -438,31 +519,30 @@ async function importMessageById(tbMessageId) {
     return mid;
   }
 
-  // Step 3: No predecessor found
+  // Step 3: No predecessor found. The status bar sends the model (and
+  // team) of the "Add as ..." button clicked; otherwise ask in a dialog.
   await cacheNotFoundResult(mid);
-  const btnIdx = await showDialog(
-    "Odoo Email Connector",
-    "This email and its predecessor are not in Odoo. How do you want to import it?",
-    [
-      { title: "As Opportunity (CRM Lead)", value: 0 },
-      {
-        title: "Generic",
-        value: 1,
-        tooltip:
-          "Might fail on Odoo 19 without Lost Messages module, see https://github.com/joergsteffens/thunderbird2odoo",
-      },
-    ],
-  );
-  if (btnIdx === 0) {
+
+  if (!choice?.model) choice = await askImportChoice(cfg);
+  if (!choice) return mid;
+
+  const model = resolveImportModel(choice, cfg);
+  const importedAs = "Email imported as " + getModelLabel(model);
+  if (model === MODEL_TICKET) {
+    const teamId = resolveTeamId(choice, cfg);
+    const customValues = teamId ? { team_id: teamId } : null;
     await uploadAndShowResult(
       cfg,
-      "crm.lead",
-      "Email imported as Opportunity (CRM Lead)",
+      MODEL_TICKET,
+      importedAs,
       decoded,
       mid,
+      customValues,
     );
-  } else if (btnIdx === 1) {
-    await uploadAndShowResult(cfg, false, "Email imported", decoded, mid);
+  } else if (model === MODEL_LEAD) {
+    await uploadAndShowResult(cfg, MODEL_LEAD, importedAs, decoded, mid);
+  } else {
+    await uploadAndShowResult(cfg, false, importedAs, decoded, mid);
   }
   return mid;
 }
@@ -492,8 +572,19 @@ async function verifyMessageById(tbMessageId) {
   return await cacheNotFoundResult(mid);
 }
 
-async function uploadAndShowResult(cfg, model, prefix, decoded, messageId) {
-  const rawResult = await uploadMail(cfg, decoded, model);
+async function uploadAndShowResult(
+  cfg,
+  model,
+  prefix,
+  decoded,
+  messageId,
+  customValues = null,
+) {
+  // Opt-in (Options page): see rewriteDeliveredTo() for the reason.
+  const message = cfg.rewriteDeliveredTo
+    ? rewriteDeliveredTo(decoded)
+    : decoded;
+  const rawResult = await uploadMail(cfg, message, model, customValues);
   console.debug("uploadAndShowResult: rawResult=" + JSON.stringify(rawResult));
 
   if (rawResult) {
@@ -771,7 +862,7 @@ async function handleAddMessage(msg, sender) {
   const cfg = await requireConfig();
   if (!cfg) return { ok: false, error: "Not configured" };
   try {
-    const mid = await importMessageById(msgId);
+    const mid = await importMessageById(msgId, msg.choice);
     if (!mid) return null;
     const entry = await getCachedResult(mid);
     if (!entry) return null;
@@ -794,6 +885,24 @@ async function handleCountOdooMessages(msg) {
   try {
     const count = await countMailMessages(cfg, since);
     return { ok: true, count };
+  } catch (err) {
+    return errorResult(err);
+  }
+}
+
+/**
+ * Reads the Helpdesk teams. `available` is false when Helpdesk is not
+ * installed in Odoo. Uses msg.config when given ("Test connection" checks
+ * the settings before they are saved), otherwise the stored settings.
+ */
+async function handleListHelpdeskTeams(msg) {
+  const cfg = msg.config || (await requireConfig());
+  if (!cfg) return { ok: false, error: "Not configured" };
+  try {
+    if (!(await isModelInstalled(cfg, "helpdesk.team")))
+      return { ok: true, available: false, teams: [] };
+    const teams = await listHelpdeskTeams(cfg);
+    return { ok: true, available: true, teams };
   } catch (err) {
     return errorResult(err);
   }
@@ -823,6 +932,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       case "countOdooMessages":
         return handleCountOdooMessages(msg);
 
+      case "listHelpdeskTeams":
+        return handleListHelpdeskTeams(msg);
+
       case "clearCache":
         return clearAllCache().then(() => ({ ok: true }));
 
@@ -849,7 +961,11 @@ async function registerDisplayScript() {
   }
   try {
     await ns.register({
-      js: [{ file: "lib/domUtils.js" }, { file: "displayScript.js" }],
+      js: [
+        { file: "lib/importChoice.js" },
+        { file: "lib/domUtils.js" },
+        { file: "displayScript.js" },
+      ],
     });
     console.debug("registerDisplayScript: registered");
   } catch (err) {

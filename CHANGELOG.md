@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.0
+
+### Features
+
+- **Import as Helpdesk Ticket**: emails can be imported as `helpdesk.ticket`. When Helpdesk is available, the "How do you want to import it?" dialog also offers *As Ticket (Helpdesk)*, with a team select when there are several teams. Without Helpdesk, the dialog is unchanged (Opportunity or Generic).
+- **Status bar**: for an email without Odoo record and predecessor, *Add* is replaced by one button per import type (*Add as Ticket (Helpdesk)*, *Add as Opportunity (CRM Lead)*, *Add as Generic*, Ticket only with Helpdesk), so the email is imported with one click. With several Helpdesk teams, a team select follows *Add as Ticket*. The status bar no longer preselects an import type, so the *Default Import Type* option is gone.
+- **Import Settings** in the options: default Helpdesk team (not set by default: Odoo picks the team), *Load teams from Odoo*. *Test connection* and *Load teams from Odoo* check whether Helpdesk is installed; without it, the Helpdesk options are shown greyed out. After upgrading, click *Load teams from Odoo* once to enable the Ticket import.
+
+### Fixes
+
+- **Stale cache on Verify**: predecessors are always re-checked in Odoo, so replies are no longer linked to a deleted record.
+- **Wrong follower on imported tickets** (opt-in, *Import Settings*): Odoo reads recipients from the `Delivered-To` header first, which after local delivery can hold the internal mailbox (e.g. `user@internal-domain`) and adds it as a follower. When enabled, `Delivered-To` is replaced with `X-Original-To` before upload (or removed when missing, so Odoo falls back to `To`).
+
 ## 0.6.3
 
 ### Fixes
